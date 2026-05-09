@@ -81,9 +81,44 @@ string normalize(string s) {
 }
 
 unordered_set<string> stopwords = {
-    "the","and","of","in","a","to","is","on","for",
-    "with","as","by","at","an","be","this","that",
-    "from","it","are","was","were","or"
+    // Artículos y determinantes
+    "the", "a", "an", "this", "that", "these", "those",
+
+    // Preposiciones (las más comunes)
+    "of", "in", "to", "for", "with", "on", "at", "from", "by",
+    "about", "into", "through", "during", "before", "after",
+    "above", "below", "up", "out", "off", "over", "under",
+    "again", "further", "then", "once", "here", "there",
+
+    // Conjunciones
+    "and", "but", "or", "yet", "so", "if", "because", "although",
+    "though", "while", "where", "when", "than", "then",
+
+    // Pronombres personales y posesivos
+    "i", "you", "he", "she", "it", "we", "they", "me", "him",
+    "her", "us", "them", "my", "your", "his", "its", "our",
+    "their", "mine", "yours", "hers", "ours", "theirs",
+
+    // Pronombres relativos
+    "who", "whom", "whose", "which", "what",
+
+    // Verbos auxiliares y "to be"
+    "is", "am", "are", "was", "were", "be", "been", "being",
+    "have", "has", "had", "do", "does", "did",
+    "will", "would", "shall", "should", "may", "might",
+    "can", "could", "must",
+
+    // Adverbios comunes sin significado propio
+    "not", "no", "so", "just", "only", "also", "too",
+    "very", "really", "still", "already", "yet", "even",
+    "now", "here", "there", "everywhere", "somewhere",
+
+    // Metadatos del dataset (ruido)
+    "en", "org", "https", "http", "wikipedia", "wiki",
+    "ref", "cite", "url", "accessed", "retrieved",
+
+    // Números ordinales/cardinales genéricos
+    "one", "two", "first", "second"
 };
 
 vector<string> tokenize(const string& text) {
