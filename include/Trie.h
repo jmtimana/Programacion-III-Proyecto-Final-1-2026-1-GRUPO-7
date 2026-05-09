@@ -19,11 +19,13 @@ class Trie {
 private:
 
     Node* root;
+    void deleteNode(Node* node);
 
 public:
 
     Trie();
-
+    ~Trie();
+    
     void insertSingleWord(int id, const string& word);
 
     void insertSuffixes(int id, const string& word);

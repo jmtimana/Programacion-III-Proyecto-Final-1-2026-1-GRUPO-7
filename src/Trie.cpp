@@ -108,3 +108,17 @@ vector<int> Trie::search(string query) {
 
     return allResults;
 }
+
+Trie::~Trie() {
+    deleteNode(root);
+}
+
+void Trie::deleteNode(Node* node) {
+    if (node == nullptr) return;
+
+    for (auto& [key, child] : node->children) {
+        deleteNode(child);
+    }
+
+    delete node;
+}
