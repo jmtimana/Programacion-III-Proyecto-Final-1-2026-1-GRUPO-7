@@ -4,32 +4,24 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-
-void SearchEngine::loadCSV(const string& filename) {
-
-    ifstream file(filename);
-
-    if (!file.is_open()) {
-
-        cout << "Error opening CSV\n";
-        return;
-    }
-
-    vector<string> rows = readCSVRows(file);
-    movies.reserve(rows.size());//para reservar memoria
-    //evita que se meuvabn los datos
-    int id = 0;
-
-    for (int i = 1; i < rows.size(); i++) {
-
+#include <thread>
+#include <vector>
+#include <chrono>
+void SearchEngine::processChunk(
+    const vector<string>& rows,
+    int begin,
+    int end)
+{
+    for(int i = begin; i < end; i++)
+    {
         vector<string> row = parseCSVLine(rows[i]);
 
-        if (row.size() != 8)
+        if(row.size() != 8)
             continue;
 
         Movie movie;
 
-        movie.id = id;
+        movie.id = i - 1;
 
         movie.title = row[1];
         movie.cast = row[3];
@@ -37,27 +29,165 @@ void SearchEngine::loadCSV(const string& filename) {
         movie.genre = row[5];
         movie.plot = row[7];
 
-        movie.normalizedTitle = normalize(movie.title);
-        movie.normalizedPlot = normalize(movie.plot);
-        movie.normalizedGenre = normalize(movie.genre);
-        movie.normalizedDirector = normalize(movie.director);
-        movie.normalizedCast = normalize(movie.cast);
+        movie.normalizedTitle =
+            normalize(movie.title);
+
+        movie.normalizedPlot =
+            normalize(movie.plot);
+
+        movie.normalizedGenre =
+            normalize(movie.genre);
+
+        movie.normalizedDirector =
+            normalize(movie.director);
+
+        movie.normalizedCast =
+            normalize(movie.cast);
+
+        movie.normalizedText.reserve(
+            movie.normalizedTitle.size() +
+            movie.normalizedCast.size() +
+            movie.normalizedDirector.size() +
+            movie.normalizedGenre.size() +
+            movie.normalizedPlot.size() +
+            10
+        );
 
         movie.normalizedText =
-            movie.title + " " +
-            movie.cast + " " +
-            movie.director + " " +
-            movie.genre + " " +
-            movie.plot;
+            movie.normalizedTitle + " " +
+            movie.normalizedCast + " " +
+            movie.normalizedDirector + " " +
+            movie.normalizedGenre + " " +
+            movie.normalizedPlot;
 
-        movies.push_back(movie);
+        movies[movie.id] = std::move(movie);
+    }
+}
 
-        trie.insert(id, movie.normalizedText);
+void SearchEngine::loadCSV(const string& filename)
+{
+    ifstream file(filename);
 
-        id++;
+    if(!file.is_open())
+    {
+        cout << "Error opening CSV\n";
+        return;
     }
 
-    cout << "Movies loaded: " << movies.size() << endl;
+    cout << "Leyendo CSV...\n";
+
+    auto startRead =
+        chrono::high_resolution_clock::now();
+
+    vector<string> rows =
+        readCSVRows(file);
+
+    auto endRead =
+        chrono::high_resolution_clock::now();
+
+    chrono::duration<double> readTime =
+        endRead - startRead;
+
+    cout << "Tiempo lectura CSV: "
+         << readTime.count()
+         << " segundos\n";
+
+    if(rows.size() <= 1)
+    {
+        cout << "CSV vacio\n";
+        return;
+    }
+
+    //-------------------------------------------------
+    // Reservar espacio REAL
+    //-------------------------------------------------
+
+    movies.clear();
+
+    movies.resize(rows.size() - 1);
+
+    //-------------------------------------------------
+    // Threads
+    //-------------------------------------------------
+
+    unsigned h =
+        thread::hardware_concurrency();
+
+    if(h == 0)
+        h = 8;
+
+    cout << "Threads utilizados: "
+         << h
+         << endl;
+
+    int totalRows =
+        static_cast<int>(rows.size()) - 1;
+
+    vector<thread> threads;
+
+    auto startParse =
+        chrono::high_resolution_clock::now();
+
+    for(unsigned t = 0; t < h; t++)
+    {
+        int begin =
+            1 + t * totalRows / h;
+
+        int end =
+            1 + (t + 1) * totalRows / h;
+
+        threads.emplace_back(
+            &SearchEngine::processChunk,
+            this,
+            cref(rows),
+            begin,
+            end
+        );
+    }
+
+    for(auto& th : threads)
+        th.join();
+
+    auto endParse =
+        chrono::high_resolution_clock::now();
+
+    chrono::duration<double> parseTime =
+        endParse - startParse;
+
+    cout << "Tiempo parse/normalize: "
+         << parseTime.count()
+         << " segundos\n";
+
+    //-------------------------------------------------
+    // Construir Trie
+    //-------------------------------------------------
+
+    cout << "Construyendo Trie...\n";
+
+    auto startTrie =
+        chrono::high_resolution_clock::now();
+
+    for(const Movie& movie : movies)
+    {
+        trie.insert(
+            movie.id,
+            movie.normalizedText
+        );
+    }
+
+    auto endTrie =
+        chrono::high_resolution_clock::now();
+
+    chrono::duration<double> trieTime =
+        endTrie - startTrie;
+
+    cout << "Tiempo Trie: "
+         << trieTime.count()
+         << " segundos\n";
+
+    cout << "\nMovies loaded: "
+         << movies.size()
+         << endl;
 }
 
 vector<int> SearchEngine::search(const string& query) {

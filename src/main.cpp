@@ -1,26 +1,66 @@
 #include "../include/SearchEngine.h"
 #include "../include/UserManager.h"
-
+#include <functional>
 #include <iostream>
 #include <limits>
-
+#include <thread>
+#include <chrono>
+#include <future>
 using namespace std;
+void comencemos( SearchEngine &engine){
 
+    engine.loadCSV(
+            "../Data/wiki_movie_plots_deduped.csv"
+        );
+}
 int main() {
-
+    SearchEngine engine;
     system("chcp 65001");
-
+    future<void> res = async(launch::async,
+        comencemos,
+        std::ref(engine));
     srand(time(NULL));
 
-    SearchEngine engine;
 
     cout << "====================================\n";
     cout << " Cargando base de datos...\n";
     cout << "====================================\n";
 
-    engine.loadCSV(
-        "../Data/wiki_movie_plots_deduped.csv"
-    );
+    char anim[] = {'|', '/', '-', '\\'};
+
+    auto inicio =
+        chrono::steady_clock::now();
+
+    int i = 0;
+
+    const int segundos = 30;
+    const int anchoBarra = 50;
+
+    for(int i = 0; i <= segundos; i++)
+    {
+        int progreso = i * anchoBarra / segundos;
+
+        cout << "\r[";
+
+        for(int j = 0; j < anchoBarra; j++)
+        {
+            if(j < progreso)
+                cout << "=";
+            else
+                cout << " ";
+        }
+
+        cout << "] "
+             << (i * 100 / segundos)
+             << "%";
+
+        cout.flush();
+
+        this_thread::sleep_for(
+            chrono::seconds(1)
+        );
+    }
+
 
     string usuario_actual;
 

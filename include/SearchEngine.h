@@ -24,6 +24,10 @@ public:
         const vector<int>& ids,
         const string& query
         );
-
+    void processChunk(
+    const vector<string>& rows,
+    int begin,
+    int end
+);
     Movie getMovie(int id);
 };
