@@ -7,6 +7,38 @@
 #include <chrono>
 #include <future>
 using namespace std;
+struct decoratorRecomendar{
+
+    virtual void show(SearchEngine &buscar, string usuario = "") = 0;
+    ~decoratorRecomendar(){}
+};
+struct RecomendcionBasica: public decoratorRecomendar {
+  void show(SearchEngine & buscar, string usuario = "") override {
+      if (usuario ==  "") {
+          recomendaciones_nuevo(buscar);
+      }
+      else {
+          recomendar_por_ultimo_like(
+                buscar,
+                usuario
+            );
+      }
+  }
+};
+struct RecomendicionPremiun:public decoratorRecomendar {
+    void show(SearchEngine & buscar, string usuario = "") override {
+        if (usuario ==  "") {
+            recomendaciones_nuevo(buscar);
+        }
+        else {
+            recomendar_por_ultimo_like(
+                  buscar,
+                  usuario
+              );
+        }
+        cout << "\n Recomendaciones Premium\n";
+    }
+};
 void comencemos( SearchEngine &engine){
 
     engine.loadCSV(
@@ -20,20 +52,13 @@ int main() {
         comencemos,
         std::ref(engine));
     srand(time(NULL));
-
+    decoratorRecomendar * recomendar = new RecomendcionBasica;
 
     cout << "====================================\n";
     cout << " Cargando base de datos...\n";
     cout << "====================================\n";
 
-    char anim[] = {'|', '/', '-', '\\'};
-
-    auto inicio =
-        chrono::steady_clock::now();
-
-    int i = 0;
-
-    const int segundos = 30;
+    const int segundos = 6;
     const int anchoBarra = 50;
 
     for(int i = 0; i <= segundos; i++)
@@ -57,7 +82,7 @@ int main() {
         cout.flush();
 
         this_thread::sleep_for(
-            chrono::seconds(1)
+            chrono::seconds(5)
         );
     }
 
@@ -119,11 +144,7 @@ int main() {
             cout << "====================================\n";
 
             mostrar_ver_despues(usuario_actual);
-
-            recomendar_por_ultimo_like(
-                engine,
-                usuario_actual
-            );
+            recomendar->show(engine, usuario_actual);
 
             cout << "\n====================================\n";
             cout << " Puedes buscar:\n";
@@ -155,7 +176,7 @@ int main() {
 
             crear_usuario(usuario_actual);
 
-            recomendaciones_nuevo(engine);
+            recomendar->show(engine);
 
             cout << "\n====================================\n";
             cout << " Puedes buscar:\n";
@@ -183,6 +204,6 @@ int main() {
             cout << "\nOpcion invalida.\n";
         }
     }
-
+    delete recomendar;
     return 0;
 }

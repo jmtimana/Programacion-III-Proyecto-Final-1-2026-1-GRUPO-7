@@ -98,17 +98,9 @@ void SearchEngine::loadCSV(const string& filename)
         return;
     }
 
-    //-------------------------------------------------
-    // Reservar espacio REAL
-    //-------------------------------------------------
-
     movies.clear();
 
     movies.resize(rows.size() - 1);
-
-    //-------------------------------------------------
-    // Threads
-    //-------------------------------------------------
 
     unsigned h =
         thread::hardware_concurrency();
@@ -157,10 +149,6 @@ void SearchEngine::loadCSV(const string& filename)
     cout << "Tiempo parse/normalize: "
          << parseTime.count()
          << " segundos\n";
-
-    //-------------------------------------------------
-    // Construir Trie
-    //-------------------------------------------------
 
     cout << "Construyendo Trie...\n";
 
