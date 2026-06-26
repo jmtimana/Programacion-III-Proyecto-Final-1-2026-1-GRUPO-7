@@ -37,7 +37,7 @@ string extraer_genero(
     const string& linea
 );
 
-void recomendar_por_ultimo_like(
+void recomendar_por_likes(
     SearchEngine& engine,
     const string& usuario
 );

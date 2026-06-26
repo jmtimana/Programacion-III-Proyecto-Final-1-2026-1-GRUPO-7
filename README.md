@@ -513,7 +513,7 @@ Gestión de usuarios mediante archivos `.txt` (uno por usuario).
 | `existe_usuario(nombre)` | Verifica existencia del archivo |
 | `dar_me_gusta(usuario, linea)` | Guarda like o "ver luego" en el archivo |
 | `mostrar_ver_despues(usuario)` | Muestra entradas con etiqueta `[ver luego]` |
-| `recomendar_por_ultimo_like(engine, usuario)` | Busca películas del género del último like |
+| `recomendar_por_likes(engine, usuario)` | Busca películas del género del último like |
 | `recomendaciones_nuevo(engine)` | Muestra 5 películas aleatorias para usuarios nuevos |
 | `buscarYDarLike(engine, usuario)` | Loop interactivo de búsqueda con paginación (5 resultados por página) |
 

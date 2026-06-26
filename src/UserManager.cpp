@@ -10,7 +10,8 @@
 
 void crear_usuario(const string& nombreArchivo) {
 
-    ifstream archivoLectura(nombreArchivo);
+    string archivo = nombreArchivo + ".txt";
+    ifstream archivoLectura(archivo);
 
     if (archivoLectura.good()) {
 
@@ -23,7 +24,7 @@ void crear_usuario(const string& nombreArchivo) {
 
     archivoLectura.close();
 
-    ofstream archivoEscritura(nombreArchivo);
+    ofstream archivoEscritura(archivo);
 
     if (archivoEscritura.is_open()) {
 
@@ -471,40 +472,84 @@ string extraer_genero(const string& linea) {
     return "";
 }
 
-void recomendar_por_ultimo_like(
+void recomendar_por_likes(
     SearchEngine& engine,
     const string& usuario
 ) {
-
-    string ultima = obtener_ultimo_like(usuario);
-
-    if (ultima.empty()) {
-
+    ifstream file(usuario + ".txt");
+    if (!file.is_open()) {
         cout << "No hay likes previos.\n";
         return;
     }
 
-    string genero = extraer_genero(ultima);
+    vector<string> likes;
+    string linea;
+    while (getline(file, linea)) {
+        if (linea.find("[like]") != string::npos) {
+            likes.push_back(linea);
+        }
+    }
+    file.close();
 
-    cout << "\nBasado en tu ultimo like ("
-         << genero
-         << "):\n";
+    if (likes.empty()) {
+        cout << "No hay likes previos.\n";
+        return;
+    }
 
-    vector<int> ids = engine.search(genero);
+    int start = max(0, (int)likes.size() - 5);
+    vector<string> ultimos5(likes.begin() + start, likes.end());
+
+    unordered_map<string, int> freq;
+    vector<string> generos;
+    for (const string& like : ultimos5) {
+        string g = normalize(extraer_genero(like));
+        if (!g.empty()) {
+            freq[g]++;
+            generos.push_back(g);
+        }
+    }
+
+    if (freq.empty()) {
+        cout << "No se encontraron generos.\n";
+        return;
+    }
+
+    string generoElegido;
+    int maxFreq = 0;
+    for (const auto& [g, f] : freq) {
+        if (f > maxFreq) {
+            maxFreq = f;
+            generoElegido = g;
+        }
+    }
+
+    vector<int> ids;
+    if (maxFreq == 1 && freq.size() >= 2) {
+        generoElegido.clear();
+        for (const string& g : generos) {
+            if (!generoElegido.empty()) generoElegido += " ";
+            generoElegido += g;
+        }
+    }
+
+    ids = engine.searchByField(
+        generoElegido,
+        [](const Movie& m) { return m.normalizedGenre; }
+    );
 
     if (ids.empty()) {
+        ids = engine.search(generoElegido);
+    }
 
+    if (ids.empty()) {
         cout << "No se encontraron recomendaciones.\n";
         return;
     }
 
+    cout << "\nRecomendaciones:\n";
     int limite = min(5, (int)ids.size());
-
     for (int i = 0; i < limite; i++) {
-
-        cout << "- "
-             << engine.getMovie(ids[i]).title
-             << endl;
+        cout << "- " << engine.getMovie(ids[i]).title << endl;
     }
 }
 

@@ -18,7 +18,7 @@ struct RecomendcionBasica: public decoratorRecomendar {
           recomendaciones_nuevo(buscar);
       }
       else {
-          recomendar_por_ultimo_like(
+          recomendar_por_likes(
                 buscar,
                 usuario
             );
@@ -31,7 +31,7 @@ struct RecomendicionPremiun:public decoratorRecomendar {
             recomendaciones_nuevo(buscar);
         }
         else {
-            recomendar_por_ultimo_like(
+            recomendar_por_likes(
                   buscar,
                   usuario
               );
