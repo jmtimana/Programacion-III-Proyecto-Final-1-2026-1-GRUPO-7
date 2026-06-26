@@ -154,10 +154,41 @@ int main() {
             cout << "- subcadenas\n";
             cout << "====================================\n";
 
-            buscarYDarLike(
-                engine,
-                usuario_actual
-            );
+            while (true) {
+
+                cout << "\n====================================\n";
+                cout << "[1] Busqueda general\n";
+                cout << "[2] Busqueda por categoria\n";
+                cout << "[0] Cerrar sesion\n";
+                cout << "====================================\n";
+                cout << "Seleccione: ";
+
+                int modo;
+                cin >> modo;
+
+                if (cin.fail()) {
+                    cin.clear();
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                    cout << "\nOpcion invalida.\n";
+                    continue;
+                }
+
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+                if (modo == 0) break;
+
+                if (modo == 1) {
+                    buscarYDarLike(engine, usuario_actual);
+                    break;
+                }
+
+                if (modo == 2) {
+                    buscarPorCategoria(engine, usuario_actual);
+                    break;
+                }
+
+                cout << "\nOpcion invalida.\n";
+            }
         }
 
         // CREAR USUARIO
@@ -186,10 +217,41 @@ int main() {
             cout << "- subcadenas\n";
             cout << "====================================\n";
 
-            buscarYDarLike(
-                engine,
-                usuario_actual
-            );
+            while (true) {
+
+                cout << "\n====================================\n";
+                cout << "[1] Busqueda general\n";
+                cout << "[2] Busqueda por categoria\n";
+                cout << "[0] Cerrar sesion\n";
+                cout << "====================================\n";
+                cout << "Seleccione: ";
+
+                int modo;
+                cin >> modo;
+
+                if (cin.fail()) {
+                    cin.clear();
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                    cout << "\nOpcion invalida.\n";
+                    continue;
+                }
+
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+                if (modo == 0) break;
+
+                if (modo == 1) {
+                    buscarYDarLike(engine, usuario_actual);
+                    break;
+                }
+
+                if (modo == 2) {
+                    buscarPorCategoria(engine, usuario_actual);
+                    break;
+                }
+
+                cout << "\nOpcion invalida.\n";
+            }
         }
 
         else if (opcion == 3) {

@@ -229,6 +229,201 @@ void buscarYDarLike(SearchEngine& engine, const string& usuario) {
     }
 }
 
+void buscarPorCategoria(SearchEngine& engine, const string& usuario) {
+
+    while (true) {
+
+        cout << "\n=========== BUSQUEDA POR CATEGORIA ===========\n";
+        cout << "[1] Director\n";
+        cout << "[2] Genero\n";
+        cout << "[3] Reparto\n";
+        cout << "[4] Titulo\n";
+        cout << "[0] Volver\n";
+        cout << "==============================================\n";
+        cout << "Seleccione: ";
+
+        string entrada;
+        getline(cin, entrada);
+
+        if (entrada.empty()) {
+            cout << "\nOpcion invalida.\n";
+            continue;
+        }
+
+        bool esNumero = true;
+        for (char c : entrada) {
+            if (!isdigit(c)) { esNumero = false; break; }
+        }
+        if (!esNumero) {
+            cout << "\nOpcion invalida.\n";
+            continue;
+        }
+
+        int op = atoi(entrada.c_str());
+
+        if (op == 0) break;
+
+        function<string(const Movie&)> getter;
+        string nombreCampo;
+
+        switch (op) {
+            case 1:
+                getter = [](const Movie& m) { return m.normalizedDirector; };
+                nombreCampo = "director";
+                break;
+            case 2:
+                getter = [](const Movie& m) { return m.normalizedGenre; };
+                nombreCampo = "genero";
+                break;
+            case 3:
+                getter = [](const Movie& m) { return m.normalizedCast; };
+                nombreCampo = "reparto";
+                break;
+            case 4:
+                getter = [](const Movie& m) { return m.normalizedTitle; };
+                nombreCampo = "titulo";
+                break;
+            default:
+                cout << "\nOpcion invalida.\n";
+                continue;
+        }
+
+        string query;
+
+        while (true) {
+
+            cout << "\n====================================\n";
+            cout << "Buscar por " << nombreCampo
+                 << " ('exit' para volver)\n";
+            cout << "====================================\n";
+            cout << "Busqueda: ";
+
+            getline(cin, query);
+
+            if (query.empty()) {
+                cout << "\nIngrese una busqueda valida.\n";
+                continue;
+            }
+
+            if (query == "exit" || query == "0" || query == "volver") break;
+
+            vector<int> ids = engine.searchByField(query, getter);
+
+            if (ids.empty()) {
+                cout << "\nNo hay resultados.\n";
+                continue;
+            }
+
+            int index = 0;
+
+            while (index < ids.size()) {
+
+                cout << "\n============= RESULTADOS =============\n";
+
+                vector<int> visibles;
+
+                for (
+                    int i = 0;
+                    i < 5 && index < ids.size();
+                    i++, index++
+                ) {
+                    cout << i + 1 << ". "
+                         << engine.getMovie(ids[index]).title
+                         << endl;
+                    visibles.push_back(ids[index]);
+                }
+
+                cout << "======================================\n";
+                cout << "[1-5] Ver pelicula\n";
+                cout << "[9]   Ver mas\n";
+                cout << "[0]   Nueva busqueda\n";
+                cout << "======================================\n";
+                cout << "Seleccione: ";
+
+                getline(cin, entrada);
+
+                if (entrada.empty()) {
+                    cout << "\nOpcion invalida.\n";
+                    continue;
+                }
+
+                esNumero = true;
+                for (char c : entrada) {
+                    if (!isdigit(c)) { esNumero = false; break; }
+                }
+                if (!esNumero) {
+                    cout << "\nOpcion invalida.\n";
+                    break;
+                }
+
+                int accion = atoi(entrada.c_str());
+
+                if (accion == 0) break;
+                if (accion == 9) continue;
+
+                if (accion >= 1 && accion <= visibles.size()) {
+
+                    int elegido = visibles[accion - 1];
+
+                    cout << "\n====================================\n";
+                    cout << engine.getMovie(elegido).title << endl;
+                    cout << "====================================\n";
+                    cout << "\nSINOPSIS:\n\n";
+                    cout << normalize(engine.getMovie(elegido).plot) << endl;
+
+                    while (true) {
+
+                        cout << "\n====================================\n";
+                        cout << "[1] Dar like\n";
+                        cout << "[2] Ver despues\n";
+                        cout << "[0] Volver\n";
+                        cout << "====================================\n";
+                        cout << "Seleccione: ";
+
+                        string accStr;
+                        getline(cin, accStr);
+
+                        esNumero = true;
+                        for (char c : accStr) {
+                            if (!isdigit(c)) { esNumero = false; break; }
+                        }
+                        if (!esNumero) {
+                            cout << "\nOpcion invalida.\n";
+                            continue;
+                        }
+
+                        int acc = atoi(accStr.c_str());
+
+                        if (acc == 0) break;
+
+                        if (acc == 1) {
+                            dar_me_gusta(
+                                usuario,
+                                "[like] | " +
+                                engine.getMovie(elegido).genre
+                            );
+                            break;
+                        }
+
+                        if (acc == 2) {
+                            dar_me_gusta(
+                                usuario,
+                                "[ver luego] " +
+                                engine.getMovie(elegido).title
+                            );
+                            break;
+                        }
+
+                        cout << "\nOpcion invalida.\n";
+                    }
+                } else {
+                    cout << "\nOpcion invalida.\n";
+                }
+            }
+        }
+    }
+}
+
 bool existe_usuario(const string& nombre) {
 
     ifstream file(nombre + ".txt");

@@ -24,8 +24,8 @@ void SearchEngine::processChunk(
         movie.id = i - 1;
 
         movie.title = row[1];
-        movie.cast = row[3];
-        movie.director = row[4];
+        movie.director = row[3];
+        movie.cast = row[4];
         movie.genre = row[5];
         movie.plot = row[7];
 
@@ -183,6 +183,34 @@ vector<int> SearchEngine::search(const string& query) {
     vector<int> result = trie.search(query);
 
     return vector<int>(result.begin(), result.end());
+}
+
+vector<int> SearchEngine::searchByField(
+    const string& query,
+    function<string(const Movie&)> fieldGetter
+) {
+    vector<int> candidates = trie.search(query);
+
+    vector<string> queryWords = tokenize(normalize(query));
+
+    vector<int> filtered;
+    filtered.reserve(candidates.size());
+
+    for (int id : candidates) {
+        const string& field = fieldGetter(movies[id]);
+        bool allWordsMatch = true;
+        for (const string& word : queryWords) {
+            if (field.find(word) == string::npos) {
+                allWordsMatch = false;
+                break;
+            }
+        }
+        if (allWordsMatch) {
+            filtered.push_back(id);
+        }
+    }
+
+    return rankResults(filtered, query);
 }
 
 Movie SearchEngine::getMovie(int id) {

@@ -3,6 +3,7 @@
 #include "Movie.h"
 #include "Trie.h"
 #include <vector>
+#include <functional>
 
 using namespace std;
 
@@ -19,6 +20,11 @@ public:
     void loadCSV(const string& filename);
 
     vector<int> search(const string& query);
+
+    vector<int> searchByField(
+        const string& query,
+        function<string(const Movie&)> fieldGetter
+    );
 
     vector<int> rankResults(
         const vector<int>& ids,

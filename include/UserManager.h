@@ -20,6 +20,11 @@ void buscarYDarLike(
     const string& usuario
 );
 
+void buscarPorCategoria(
+    SearchEngine& engine,
+    const string& usuario
+);
+
 void recomendaciones_nuevo(
     SearchEngine& engine
 );

@@ -118,7 +118,10 @@ unordered_set<string> stopwords = {
     "ref", "cite", "url", "accessed", "retrieved",
 
     // Números ordinales/cardinales genéricos
-    "one", "two", "first", "second"
+    "one", "two", "first", "second",
+
+    // Valores vacíos del dataset
+    "unknown"
 };
 
 vector<string> tokenize(const string& text) {
