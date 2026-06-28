@@ -5,6 +5,7 @@
 #include <limits>
 #include <cstdlib>
 #include <cctype>
+#include <stack>
 
 #include "../include/Utils.h"
 
@@ -463,6 +464,32 @@ string obtener_ultimo_like(const string& usuario) {
     file.close();
     return ultima;
 }
+bool tiene_likes(const string& usuario) {
+    ifstream file(usuario + ".txt");
+    string linea;
+
+    while (getline(file, linea)) {
+        if (linea.find("[like]") != string::npos) {
+            return true;
+        }
+    }
+    file.close();
+    return false;
+
+}
+bool tiene_ver_despues(const string& usuario) {
+    ifstream file(usuario + ".txt");
+    string linea;
+
+    while (getline(file, linea)) {
+        if (linea.find("[ver luego]") != string::npos) {
+            return true;
+        }
+    }
+    file.close();
+    return false;
+
+}
 
 string extraer_genero(const string& linea) {
     size_t pos = linea.find("|");
@@ -565,19 +592,26 @@ void dar_me_gusta(const string & nombre_usuario, const string& linea) {
     }
 }
 
-void mostrar_ver_despues(const string& nombre_usuario) {
+void mostrar_ver_despues(const string& nombre_usuario, int m) {
     string archivo = nombre_usuario + ".txt";
     ifstream file(archivo);
     if (!file.is_open()) {
         cout << "No se pudo abrir el archivo.\n";
         return;
     }
+    stack<string> peliculas_ver_despues;
     string linea;
     cout << "\n--- PELICULAS PARA VER DESPUES ---\n";
     while (getline(file, linea)) {
         if (linea.find("[ver luego]") != string::npos) {
-            cout << linea << endl;
+            peliculas_ver_despues.push(linea);
         }
     }
     file.close();
+    for (int i = 0;i <m; i++) {
+        string mayor = peliculas_ver_despues.top();
+        peliculas_ver_despues.pop();
+        cout << mayor << endl;
+    }
+
 }

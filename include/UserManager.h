@@ -12,7 +12,7 @@ void dar_me_gusta(
 );
 
 void mostrar_ver_despues(
-    const string& nombre_usuario
+    const string& nombre_usuario,int m
 );
 
 void buscarYDarLike(
@@ -36,7 +36,8 @@ string obtener_ultimo_like(
 string extraer_genero(
     const string& linea
 );
-
+bool tiene_likes(const string& usuario);
+bool tiene_ver_despues(const string& usuario);
 void recomendar_por_likes(
     SearchEngine& engine,
     const string& usuario
