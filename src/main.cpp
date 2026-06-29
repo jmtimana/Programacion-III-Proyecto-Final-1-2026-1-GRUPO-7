@@ -2,6 +2,7 @@
 #include "../include/UserManager.h"
 #include "../include/PlanFactory.h"
 #include "../include/PlanSession.h"
+#include "../include/LikeObserver.h"
 #include <functional>
 #include <iostream>
 #include <limits>
@@ -54,7 +55,15 @@ int main() {
         comencemos,
         std::ref(engine));
     srand(time(NULL));
-    // ── 1. ABSTRACT FACTORY: elegir plan ────────────────────
+    // ── OBSERVER: crear observadores y suscribirlos al bus ──
+    LikeLogger likeLogger;
+    LikeCounter likeCounter;
+    GenreStatsObserver genreStats;
+
+    LikeEventBus::getInstance().subscribe(&likeLogger);
+    LikeEventBus::getInstance().subscribe(&likeCounter);
+    LikeEventBus::getInstance().subscribe(&genreStats);
+    // ── 1. ABSTRACT FACTORY: elegir plan
     IPlanFactory* factory = seleccionarPlan();
     PlanSession   planSession(factory);
 
@@ -215,10 +224,11 @@ int main() {
         }
 
         else if (opcion == 3) {
+            likeCounter.mostrarResumen();
+            genreStats.mostrarTop(5);
 
             cout << "\nCerrando programa...\n";
-
-            break;
+            std::terminate();
         }
 
         else {

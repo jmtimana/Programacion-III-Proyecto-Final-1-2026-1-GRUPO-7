@@ -1,4 +1,5 @@
 #include "../include/UserManager.h"
+#include "../include/LikeObserver.h"
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -584,9 +585,19 @@ void dar_me_gusta(const string & nombre_usuario, const string& linea) {
     string archivo = nombre_usuario + ".txt";
     ofstream file(archivo, ios::app);
     if (file.is_open()) {
-        file << linea<< endl;
+        file << linea << endl;
         file.close();
         cout << "Pelicula guardada en tus likes.\n";
+
+        // OBSERVER: notificar a todos los suscriptores si fue un like
+        if (linea.find("[like]") != string::npos) {
+            // Extraer el genero de la linea "[like] | Genero"
+            size_t pos = linea.find("|");
+            string genero = (pos != string::npos)
+                            ? linea.substr(pos + 2)   // saltar "| "
+                            : "";
+            LikeEventBus::getInstance().notify(nombre_usuario, genero);
+        }
     } else {
         cout << "Error al guardar.\n";
     }

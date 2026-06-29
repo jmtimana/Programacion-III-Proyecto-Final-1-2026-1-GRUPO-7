@@ -4,17 +4,15 @@
 #include "Trie.h"
 #include <vector>
 #include <functional>
-
+#include <atomic>
 using namespace std;
 
 class SearchEngine {
 
 private:
-
     Trie trie;
 
     vector<Movie> movies;
-
 public:
 
     void loadCSV(const string& filename);
