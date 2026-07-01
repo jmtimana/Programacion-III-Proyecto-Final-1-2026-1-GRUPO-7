@@ -192,20 +192,15 @@ vector<int> SearchEngine::searchByField(
     vector<int> candidates = trie.search(query);
 
     vector<string> queryWords = tokenize(normalize(query));
+    string fullQuery = normalize(query);
 
     vector<int> filtered;
     filtered.reserve(candidates.size());
 
     for (int id : candidates) {
         const string& field = fieldGetter(movies[id]);
-        bool allWordsMatch = true;
-        for (const string& word : queryWords) {
-            if (field.find(word) == string::npos) {
-                allWordsMatch = false;
-                break;
-            }
-        }
-        if (allWordsMatch) {
+
+        if (matchStrategy->matches(field, queryWords, fullQuery)) {
             filtered.push_back(id);
         }
     }
@@ -220,50 +215,5 @@ Movie SearchEngine::getMovie(int id) {
 
 vector<int> SearchEngine::rankResults( const vector<int>& ids, const string& query) {
 
-    vector<pair<int,int>> scored;
-    vector<string> queryWords = tokenize(normalize(query));
-
-    string fullQuery = normalize(query);
-
-    for (int id : ids) {
-        const Movie& movie = movies[id];
-        int score = 0;
-
-        const string& title = movie.normalizedTitle;
-        const string& plot = movie.normalizedPlot;
-        const string& genre = movie.normalizedGenre;
-        const string& director = movie.normalizedDirector;
-        const string& cast = movie.normalizedCast;
-
-        for (const string& word : queryWords) {
-            if (title.find(word) != string::npos)
-                score += 10;
-            if (plot.find(word) != string::npos)
-                score += 3;
-            if (genre.find(word) != string::npos)
-                score += 2;
-            if (director.find(word) != string::npos)
-                score += 2;
-            if (cast.find(word) != string::npos)
-                score += 1;
-        }
-
-        if (title.find(fullQuery) != string::npos)
-            score += 20;
-
-        scored.push_back({score, id});
-    }
-
-    sort(
-        scored.begin(),
-        scored.end(),
-        greater<pair<int,int>>()
-    );
-
-    vector<int> ranked;
-
-    for (auto& p : scored)
-        ranked.push_back(p.second);
-
-    return ranked;
+    return rankingStrategy->rank(ids, query, movies);
 }

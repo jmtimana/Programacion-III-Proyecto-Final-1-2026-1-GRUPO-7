@@ -12,4 +12,6 @@ file(GLOB SOURCES "src/*.cpp")
 add_executable(Entregable1 ${SOURCES}
         include/PlanFactory.h
         include/PlanSession.h
-        include/LikeObserver.h)
+        include/LikeObserver.h
+        include/RankingStrategy.h
+        include/SearchMatchStrategy.h)

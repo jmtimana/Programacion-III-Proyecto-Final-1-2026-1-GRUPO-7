@@ -1,5 +1,7 @@
 #include "../include/UserManager.h"
 #include "../include/LikeObserver.h"
+#include "../include/RankingStrategy.h"
+#include "../include/SearchMatchStrategy.h"
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -43,6 +45,26 @@ void crear_usuario(const string& nombreArchivo) {
 void buscarYDarLike(SearchEngine& engine, const string& usuario) {
 
     string query;
+
+    cout << "\n====================================\n";
+    cout << "Orden:\n";
+    cout << "[1] Relevancia\n";
+    cout << "[2] Alfabetico (A-Z)\n";
+    cout << "[0] Volver\n";
+    cout << "====================================\n";
+    cout << "Seleccione: ";
+
+    string estrategiaInput;
+    getline(cin, estrategiaInput);
+
+    if (estrategiaInput == "0") return;
+
+    if (estrategiaInput == "2")
+        engine.setRankingStrategy(new AlphabeticalRankingStrategy());
+    else
+        engine.setRankingStrategy(new RelevanceRankingStrategy());
+
+    cout << "Orden: " << engine.rankingStrategyNombre() << "\n";
 
     while (true) {
 
@@ -290,6 +312,49 @@ void buscarPorCategoria(SearchEngine& engine, const string& usuario) {
                 cout << "\nOpcion invalida.\n";
                 continue;
         }
+
+        cout << "\n====================================\n";
+        cout << "Coincidencia:\n";
+        cout << "[1] Buscar por todas las palabras\n";
+        cout << "[2] Buscar por cualquier palabra\n";
+        cout << "[3] Frase exacta\n";
+        cout << "[0] Volver\n";
+        cout << "====================================\n";
+        cout << "Seleccione: ";
+
+        string matchInput;
+        getline(cin, matchInput);
+
+        if (matchInput == "0") continue;
+
+        if (matchInput == "2")
+            engine.setMatchStrategy(new AnyWordMatchStrategy());
+        else if (matchInput == "3")
+            engine.setMatchStrategy(new ExactPhraseMatchStrategy());
+        else
+            engine.setMatchStrategy(new AllWordsMatchStrategy());
+
+        cout << "Coincidencia: " << engine.matchStrategyNombre() << "\n";
+
+        cout << "\n====================================\n";
+        cout << "Orden:\n";
+        cout << "[1] Relevancia\n";
+        cout << "[2] Alfabetico (A-Z)\n";
+        cout << "[0] Volver\n";
+        cout << "====================================\n";
+        cout << "Seleccione: ";
+
+        string rankInput;
+        getline(cin, rankInput);
+
+        if (rankInput == "0") continue;
+
+        if (rankInput == "2")
+            engine.setRankingStrategy(new AlphabeticalRankingStrategy());
+        else
+            engine.setRankingStrategy(new RelevanceRankingStrategy());
+
+        cout << "Orden: " << engine.rankingStrategyNombre() << "\n";
 
         string query;
 

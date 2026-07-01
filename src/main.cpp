@@ -6,8 +6,6 @@
 #include <functional>
 #include <iostream>
 #include <limits>
-#include <thread>
-#include <chrono>
 #include <future>
 using namespace std;
 
@@ -75,33 +73,10 @@ int main() {
     cout << " Cargando base de datos...\n";
     cout << "====================================\n";
 
-    const int segundos = 10;
-    const int anchoBarra = 100;
-
-    for(int i = 0; i <= segundos; i++)
-    {
-        int progreso = i * anchoBarra / segundos;
-
-        cout << "\r[";
-
-        for(int j = 0; j < anchoBarra; j++)
-        {
-            if(j < progreso)
-                cout << "=";
-            else
-                cout << " ";
-        }
-
-        cout << "] "
-             << (i * 100 / segundos)
-             << "%";
-
-        cout.flush();
-
-        this_thread::sleep_for(
-            chrono::seconds(1)
-        );
-    }
+    cout << "Cargando datos";
+    cout.flush();
+    res.get();
+    cout << "\rDatos cargados.\n";
 
 
     string usuario_actual;
@@ -205,12 +180,12 @@ int main() {
 
                 if (modo == 1) {
                     buscarYDarLike(engine, usuario_actual);
-                    break;
+                    continue;
                 }
 
                 if (modo == 2) {
                     buscarPorCategoria(engine, usuario_actual);
-                    break;
+                    continue;
                 }
 
                 cout << "\nOpcion invalida.\n";
