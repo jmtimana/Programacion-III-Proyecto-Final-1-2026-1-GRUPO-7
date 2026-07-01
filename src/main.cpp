@@ -47,7 +47,7 @@ IPlanFactory* seleccionarPlan() {
 
 int main() {
     //carga de archivos asincrona
-    SearchEngine engine;
+    SearchEngine& engine = SearchEngine::getInstance();
     system("chcp 65001");
     future<void> res = async(launch::async,
         comencemos,
