@@ -7,6 +7,8 @@
 #include <vector>
 #include <functional>
 #include <atomic>
+#include <stdexcept>
+
 using namespace std;
 
 using FieldGetter = function<string(const Movie&)>;
@@ -15,6 +17,9 @@ using Resultados = vector<int>;
 class SearchEngine {
 
 private:
+    // Constructor privado — nadie puede crear una instancia directamente
+    SearchEngine() = default;
+
     Trie trie;
 
     vector<Movie> movies;
@@ -24,6 +29,16 @@ private:
     ISearchMatchStrategy* matchStrategy = new AllWordsMatchStrategy();
 
 public:
+
+    // Singleton: punto de acceso global
+    static SearchEngine& getInstance() {
+        static SearchEngine instance;
+        return instance;
+    }
+
+    // Deshabilitar copia y asignación
+    SearchEngine(const SearchEngine&)            = delete;
+    SearchEngine& operator=(const SearchEngine&) = delete;
 
     ~SearchEngine() {
         delete rankingStrategy;
@@ -42,19 +57,23 @@ public:
     Resultados rankResults(
         const Resultados& ids,
         const string& query
-        );
+    );
+
     void processChunk(
-    const vector<string>& rows,
-    int begin,
-    int end
-);
+        const vector<string>& rows,
+        int begin,
+        int end
+    );
+
     Movie getMovie(int id);
+
     int movieCount() const { return movies.size(); }
 
     void setRankingStrategy(IRankingStrategy* strategy) {
         delete rankingStrategy;
         rankingStrategy = strategy;
     }
+
     string rankingStrategyNombre() const {
         return rankingStrategy->nombre();
     }
@@ -63,6 +82,7 @@ public:
         delete matchStrategy;
         matchStrategy = strategy;
     }
+
     string matchStrategyNombre() const {
         return matchStrategy->nombre();
     }
