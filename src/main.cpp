@@ -203,7 +203,7 @@ int main() {
             genreStats.mostrarTop(5);
 
             cout << "\nCerrando programa...\n";
-            std::terminate();
+            break;
         }
 
         else {
@@ -211,5 +211,6 @@ int main() {
             cout << "\nOpcion invalida.\n";
         }
     }
+    delete factory;
     return 0;
 }

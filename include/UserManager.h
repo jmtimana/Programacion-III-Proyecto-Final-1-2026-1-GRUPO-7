@@ -4,8 +4,6 @@
 #include "SearchEngine.h"
 using namespace std;
 
-void crear_usuario(const string& nombreArchivo);
-
 void dar_me_gusta(
     const string& nombre_usuario,
     const string& linea

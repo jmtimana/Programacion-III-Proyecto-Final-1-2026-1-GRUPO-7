@@ -12,36 +12,6 @@
 
 #include "../include/Utils.h"
 
-void crear_usuario(const string& nombreArchivo) {
-
-    string archivo = nombreArchivo + ".txt";
-    ifstream archivoLectura(archivo);
-
-    if (archivoLectura.good()) {
-
-        cout << "El usuario ya existe" << endl;
-
-        archivoLectura.close();
-
-        return;
-    }
-
-    archivoLectura.close();
-
-    ofstream archivoEscritura(archivo);
-
-    if (archivoEscritura.is_open()) {
-
-        archivoEscritura.close();
-
-        cout << "Archivo creado correctamente." << endl;
-
-    } else {
-
-        cout << "Error al crear el archivo." << endl;
-    }
-}
-
 void buscarYDarLike(SearchEngine& engine, const string& usuario) {
 
     string query;
@@ -507,7 +477,7 @@ void recomendaciones_nuevo(SearchEngine& engine) {
 
     for (int i = 0; i < 5; i++) {
 
-        int m = rand() % 34886;
+        int m = rand() % engine.movieCount();
 
         cout << m << ". "
              << engine.getMovie(m).title
@@ -684,7 +654,8 @@ void mostrar_ver_despues(const string& nombre_usuario, int m) {
         }
     }
     file.close();
-    for (int i = 0;i <m; i++) {
+    int limite = min(m, (int)peliculas_ver_despues.size());
+    for (int i = 0; i < limite; i++) {
         string mayor = peliculas_ver_despues.top();
         peliculas_ver_despues.pop();
         cout << mayor << endl;

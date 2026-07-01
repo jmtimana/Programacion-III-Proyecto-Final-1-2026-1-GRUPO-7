@@ -46,6 +46,7 @@ public:
     int end
 );
     Movie getMovie(int id);
+    int movieCount() const { return movies.size(); }
 
     void setRankingStrategy(IRankingStrategy* strategy) {
         delete rankingStrategy;
