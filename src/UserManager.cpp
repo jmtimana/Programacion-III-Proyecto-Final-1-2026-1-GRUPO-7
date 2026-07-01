@@ -27,12 +27,16 @@ void buscarYDarLike(SearchEngine& engine, const string& usuario) {
     string estrategiaInput;
     getline(cin, estrategiaInput);
 
-    if (estrategiaInput == "0") return;
+     if (estrategiaInput == "0") return;
 
-    if (estrategiaInput == "2")
-        engine.setRankingStrategy(new AlphabeticalRankingStrategy());
-    else
+    if (estrategiaInput == "1") {
         engine.setRankingStrategy(new RelevanceRankingStrategy());
+    } else if (estrategiaInput == "2") {
+        engine.setRankingStrategy(new AlphabeticalRankingStrategy());
+    } else {
+        cout << "\n Opcion invalida. Se usará Relevancia por defecto.\n";
+        engine.setRankingStrategy(new RelevanceRankingStrategy());
+    }
 
     cout << "Orden: " << engine.rankingStrategyNombre() << "\n";
 
@@ -294,14 +298,18 @@ void buscarPorCategoria(SearchEngine& engine, const string& usuario) {
         string matchInput;
         getline(cin, matchInput);
 
-        if (matchInput == "0") continue;
+         if (matchInput == "0") continue;
 
-        if (matchInput == "2")
-            engine.setMatchStrategy(new AnyWordMatchStrategy());
-        else if (matchInput == "3")
-            engine.setMatchStrategy(new ExactPhraseMatchStrategy());
-        else
+        if (matchInput == "1") {
             engine.setMatchStrategy(new AllWordsMatchStrategy());
+        } else if (matchInput == "2") {
+            engine.setMatchStrategy(new AnyWordMatchStrategy());
+        } else if (matchInput == "3") {
+            engine.setMatchStrategy(new ExactPhraseMatchStrategy());
+        } else {
+            cout << "\nOpcion inválida. Se usará Todas las palabras (AND) por defecto.\n";
+            engine.setMatchStrategy(new AllWordsMatchStrategy());
+        }
 
         cout << "Coincidencia: " << engine.matchStrategyNombre() << "\n";
 
@@ -316,12 +324,16 @@ void buscarPorCategoria(SearchEngine& engine, const string& usuario) {
         string rankInput;
         getline(cin, rankInput);
 
-        if (rankInput == "0") continue;
+         if (rankInput == "0") continue;
 
-        if (rankInput == "2")
-            engine.setRankingStrategy(new AlphabeticalRankingStrategy());
-        else
+        if (rankInput == "1") {
             engine.setRankingStrategy(new RelevanceRankingStrategy());
+        } else if (rankInput == "2") {
+            engine.setRankingStrategy(new AlphabeticalRankingStrategy());
+        } else {
+            cout << "\nOpcion invalida. Se usara Relevancia por defecto.\n";
+            engine.setRankingStrategy(new RelevanceRankingStrategy());
+        }
 
         cout << "Orden: " << engine.rankingStrategyNombre() << "\n";
 
