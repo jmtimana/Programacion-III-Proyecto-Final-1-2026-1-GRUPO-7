@@ -1,4 +1,6 @@
-# Proyecto #1 Programación III - Grupo 7
+# Proyecto #1 — Programación III · Grupo 7 · Entrega Final
+
+Motor de búsqueda y gestión de películas en **C++17** sobre un dataset de **34,886 películas** (Wikipedia), indexado con un **Trie de sufijos**.
 
 ## Integrantes
 - Timana Carmona, Jose Manuel
@@ -7,637 +9,357 @@
 - Huaman Huamani, Josue Yeremi
 - Cunya Villalta, Jairo André
 
-Sistema para la búsqueda y gestión de películas desarrollado en **C++17**, utilizando un **Trie** como estructura de datos principal.  
-Permite realizar búsquedas por título, palabras clave, frases o subcadenas sobre un dataset de más de **34,000 películas** provenientes de Wikipedia.
-
 ---
 
-# Estructura del Proyecto
+## Requisitos de la entrega final y su ubicación
 
-```text
-Entregable1/
-├── CMakeLists.txt
-├── include/
-│   ├── Movie.h
-│   ├── Parser.h
-│   ├── SearchEngine.h
-│   ├── Trie.h
-│   ├── UserManager.h
-│   └── Utils.h
-├── src/
-│   ├── main.cpp
-│   ├── Parser.cpp
-│   ├── SearchEngine.cpp
-│   ├── Trie.cpp
-│   ├── UserManager.cpp
-│   └── Utils.cpp
-└── Data/
-    └── wiki_movie_plots_deduped.csv
-```
-
-# 1. Pre-procesamiento de Datos
-
-Antes de insertar palabras en el Trie, el texto pasa por un pipeline de normalización que transforma los datos crudos del CSV en palabras listas para ser indexadas.
-
-## Pipeline de Transformación
-
-```text
-Texto original (CSV)
-        ↓
-[Parser] parseCSVLine()
-Maneja comillas y comas internas
-        ↓
-[Utils] normalizeAccents()
-ASCII-folding de acentos
-        ↓
-[Utils] normalize()
-Minúsculas + eliminación de caracteres no alfanuméricos
-+ colapso de espacios múltiples
-        ↓
-[Utils] tokenize()
-Split por espacios + filtrado de stopwords
-+ eliminación de palabras con menos de 3 caracteres
-        ↓
-Palabras listas para insertar en el Trie
-```
-
----
-
-# Ejemplo de Transformación
-
-| Etapa | Resultado |
-|---|---|
-| **Original** | `"The Dark Knight" — Action \| A billionaire fights crime in Gotham City. [1]` |
-| **normalizeAccents** | `"The Dark Knight" — Action \| A billionaire fights crime in Gotham City. [1]` |
-| **normalize** | `the dark knight action a billionaire fights crime in gotham city 1` |
-| **tokenize** | `["dark", "knight", "action", "billionaire", "fights", "crime", "gotham", "city"]` |
-
-Las palabras finales (`dark`, `knight`, `action`, etc.) son las que finalmente se insertan en el Trie junto con sus sufijos.
-
----
-
-# Stopwords Filtradas
-
-```cpp
-unordered_set<string> stopwords = {
-    // Artículos y determinantes
-    "the", "a", "an", "this", "that", "these", "those",
-
-    // Preposiciones (las más comunes)
-    "of", "in", "to", "for", "with", "on", "at", "from", "by",
-    "about", "into", "through", "during", "before", "after",
-    "above", "below", "up", "out", "off", "over", "under",
-    "again", "further", "then", "once", "here", "there",
-
-    // Conjunciones
-    "and", "but", "or", "yet", "so", "if", "because", "although",
-    "though", "while", "where", "when", "than", "then",
-
-    // Pronombres personales y posesivos
-    "i", "you", "he", "she", "it", "we", "they", "me", "him",
-    "her", "us", "them", "my", "your", "his", "its", "our",
-    "their", "mine", "yours", "hers", "ours", "theirs",
-
-    // Pronombres relativos
-    "who", "whom", "whose", "which", "what",
-
-    // Verbos auxiliares y "to be"
-    "is", "am", "are", "was", "were", "be", "been", "being",
-    "have", "has", "had", "do", "does", "did",
-    "will", "would", "shall", "should", "may", "might",
-    "can", "could", "must",
-
-    // Adverbios comunes sin significado propio
-    "not", "no", "so", "just", "only", "also", "too",
-    "very", "really", "still", "already", "yet", "even",
-    "now", "here", "there", "everywhere", "somewhere",
-
-    // Metadatos del dataset (ruido)
-    "en", "org", "https", "http", "wikipedia", "wiki",
-    "ref", "cite", "url", "accessed", "retrieved",
-
-    // Números ordinales/cardinales genéricos
-    "one", "two", "first", "second"
-};
-```
-# 2. Pseudocódigo de Inserción en la Estructura
-
-```text
-PROCEDIMIENTO IndexarPelicula(id, textoCompleto)
-
-    textoNormalizado ← NORMALIZAR(textoCompleto)
-
-    palabras ← TOKENIZAR(textoNormalizado)
-
-    palabrasUnicas ← ELIMINAR_DUPLICADOS(palabras)
-
-    PARA CADA palabra EN palabrasUnicas HACER
-
-        SI LONGITUD(palabra) < 3 ENTONCES
-            CONTINUAR
-        FIN SI
-
-        limite ← MIN(LONGITUD(palabra), 6)
-
-        PARA i DESDE 0 HASTA limite - 1 HACER
-
-            sufijo ← SUBCADENA(palabra, i, FIN)
-
-            SI LONGITUD(sufijo) >= 3 ENTONCES
-                INSERTAR_SUFIJO_EN_TRIE(id, sufijo)
-            FIN SI
-
-        FIN PARA
-
-    FIN PARA
-
-FIN PROCEDIMIENTO
-```
-
-```text
-PROCEDIMIENTO INSERTAR_SUFIJO_EN_TRIE(id, sufijo)
-
-    nodo ← raizTrie
-
-    PARA CADA caracter EN sufijo HACER
-
-        SI caracter NO ESTA EN nodo.hijos ENTONCES
-            nodo.hijos[caracter] ← NUEVO_NODO()
-        FIN SI
-
-        nodo ← nodo.hijos[caracter]
-
-        // Evita duplicados en el mismo nodo para la misma película
-        SI nodo.peliculas.ULTIMO <> id ENTONCES
-            nodo.peliculas.AGREGAR(id)
-        FIN SI
-
-    FIN PARA
-
-FIN PROCEDIMIENTO
-```
-
-# 3. Estructura de Datos: Trie con Sufijos
-
-## ¿Por qué un Trie?
-
-El Trie (árbol de prefijos) permite búsquedas por prefijo en `O(m)` donde `m` es la longitud de la consulta, sin importar el tamaño del dataset.
-
-Al insertar sufijos de cada palabra, esta estructura también soporta búsquedas por subcadenas.
-
----
-
-## Estructura del Nodo
-
-```cpp
-struct Node {
-    unordered_map<char, Node*> children;  // Aristas por carácter
-    vector<int> movieIDs;                 // IDs de películas que pasan por este nodo
-};
-```
-
----
-
-## Inserción con Sufijos
-
-Para la palabra `"warcraft"`:
-
-| Sufijo insertado | Longitud | ¿Insertado? |
-|---|---|---|
-| `"warcraft"` | 8 | ✅ |
-| `"arcraft"` | 7 | ✅ |
-| `"rcraft"` | 6 | ✅ |
-| `"craft"` | 5 | ✅ |
-| `"raft"` | 4 | ✅ |
-| `"aft"` | 3 | ✅ |
-| `"ft"` | 2 | ❌ (< 3) |
-
----
-
-**Ventaja:**  
-Buscar `"war"` encuentra coincidencias como `"warcraft"`, `"star wars"`, `"war"`, etc.
-
-**Límite de 6 sufijos:**  
-Se utiliza para balancear cobertura de búsqueda y consumo de memoria.  
-Un límite mayor incrementaría considerablemente el tamaño del Trie.
-
----
-
-## Algoritmo de Búsqueda
-
-```text
-FUNCION Buscar(consulta)
-
-    consulta ← NORMALIZAR(consulta)
-
-    palabras ← TOKENIZAR(consulta)
-
-    resultados ← LISTA_VACIA
-
-    PARA CADA palabra EN palabras HACER
-
-        SI LONGITUD(palabra) < 3 ENTONCES
-            CONTINUAR
-        FIN SI
-
-        nodo ← raizTrie
-
-        existe ← VERDADERO
-
-        PARA CADA caracter EN palabra HACER
-
-            SI caracter NO ESTA EN nodo.hijos ENTONCES
-                existe ← FALSO
-                ROMPER
-            FIN SI
-
-            nodo ← nodo.hijos[caracter]
-
-        FIN PARA
-
-        SI existe ENTONCES
-            resultados.AGREGAR_TODOS(nodo.peliculas)
-        FIN SI
-
-    FIN PARA
-
-    resultados ← ORDENAR(resultados)
-
-    resultados ← ELIMINAR_DUPLICADOS(resultados)
-
-    RETORNAR resultados
-
-FIN FUNCION
-```
-
-# 4. Complejidad Algorítmica
-
-## 4.1 Pre-procesamiento de Texto
-
-| Función | Complejidad Temporal | Complejidad Espacial | Justificación |
+| # | Requisito de la entrega | Cumplido en | Sección |
 |---|---|---|---|
-| `normalizeAccents(s)` | O(n × k) | O(n) | n = longitud del string. Para cada grupo de acentos (k grupos), busca y reemplaza en el string. |
-| `normalize(s)` | O(n) | O(n) | Un solo recorrido para minúsculas + filtrado + colapso de espacios. |
-| `tokenize(text)` | O(n) | O(w) | n = longitud del texto, w = cantidad de palabras válidas. Un solo recorrido con `stringstream`. |
-
-**Complejidad total del pre-procesamiento por película:**  
-O(n × k)
-
-Donde:
-- `n` = longitud total del texto de la película
-- `k` = cantidad de grupos de acentos (constante ≈ 14)
+| 1 | **Implementación del árbol** | `Trie.h` / `Trie.cpp` | Sección 4 |
+| 2 | **Programación Paralela** | `SearchEngine::loadCSV` (`std::thread`) + `main` (`std::async`) | Sección 2 |
+| 2 | **Programación Genérica** | `template leerLineasUsuario`, `FieldGetter = std::function<...>`, Strategy | Sección 3 |
+| 3 | **Patrones de Diseño** | Singleton, Abstract Factory, Strategy, Observer | Sección 1 |
+| 4 | **Interfaz con todas las herramientas** | `main.cpp` + `UserManager` + `PlanSession` | Sección 5 |
 
 ---
 
-## 4.2 Inserción en el Trie
+# 1. Patrones de Diseño
 
-| Función | Complejidad Temporal | Complejidad Espacial | Justificación |
-|---|---|---|---|
-| `insertSingleWord(id, word)` | O(L) | O(L) nuevos nodos | L = longitud de la palabra. Recorrido carácter por carácter. |
-| `insertSuffixes(id, word)` | O(6 × L) = O(L) | O(6 × L) | Genera hasta 6 sufijos, cada uno de longitud decreciente. |
-| `insert(id, text)` | O(P × 6 × L̄) | O(P × 6 × L̄) | P = palabras únicas después de tokenizar, L̄ = longitud promedio de palabra. |
+Se aplican cuatro patrones, cada uno resolviendo un problema concreto del sistema.
 
-### Dataset completo
-
-Sea:
-- `N = 34,886` películas
-- `P ≈ 150` palabras únicas por película
-- `L̄ ≈ 8` caracteres por palabra
-
-### Complejidad total de indexación
-
-```text
-O(N × P × 6 × L̄) ≈ O(N × P × L̄)
-```
-
-Con los valores del dataset:
-
-```text
-34,886 × 150 × 6 × 8 ≈ 251 millones
-```
-
-aproximadamente **251 millones de operaciones de inserción de caracteres**.
-
-### Espacio total del Trie
-
-```text
-O(N × P × 6 × L̄)
-```
-
-nodos en el peor caso teórico.
-
-Gracias a la compartición de prefijos, el espacio real es menor.
-
----
-
-## 4.3 Búsqueda en el Trie
-
-| Función | Complejidad Temporal | Justificación |
-|---|---|---|
-| `search(query)` | O(K × M + R log R) | K = palabras en el query, M = longitud promedio de palabra, R = resultados acumulados. |
-
-### Desglose
-
-- `O(K × M)` → recorrido del Trie
-- `O(R)` → acumulación de resultados
-- `O(R log R)` → `sort()`
-- `O(R)` → `unique()` y `erase()`
-
-### Casos
-
-**Peor caso:**  
-Queries muy comunes (`"love"`, `"war"`).
-
-**Mejor caso:**  
-Queries raros donde domina `O(K × M)`.
-
----
-
-## 4.4 Ranking de Resultados
-
-| Función | Complejidad Temporal | Justificación |
-|---|---|---|
-| `rankResults(ids, query)` | O(R × (Q + L̄) + R log R) | R = resultados, Q = palabras del query, L̄ = longitud promedio de campos comparados. |
-
-### Desglose
-
-Para cada resultado:
-
-- Tokenización: `O(Q)`
-- Búsquedas `find()`: `O(L̄)`
-- Comparación completa: `O(L̄)`
-
-### Ordenamiento final
-
-```text
-sort() → O(R log R)
-```
-
-### Complejidad total
-
-```text
-O(R × (Q + L̄) + R log R)
-```
-
----
-
-## 4.5 Resumen de Complejidades
-
-| Operación | Complejidad Temporal | Complejidad Espacial |
-|---|---|---|
-| Carga e indexación completa | O(N × P × L̄) | O(T) |
-| Búsqueda simple | O(M + R log R) | O(R) |
-| Búsqueda compuesta | O(K × M + R log R) | O(R) |
-| Ranking | O(R × (Q + L̄) + R log R) | O(R) |
-| Recomendación por género | O(G + R log R) | O(R) |
-| Crear usuario | O(1) | O(1) |
-| Dar like / Ver después | O(1) amortizado | O(1) |
-
-### Variables
-
-- `N` = películas del dataset
-- `P` = palabras únicas por película
-- `L̄` = longitud promedio de palabra
-- `K` = palabras del query
-- `M` = longitud promedio de palabra del query
-- `R` = resultados encontrados
-- `Q` = palabras tokenizadas
-- `G` = longitud del género
-- `T` = nodos totales del Trie
-
----
-
-## 4.6 Comparación con Alternativas
-
-| Estructura | Búsqueda | Inserción | Espacio | Subcadenas |
+| Patrón | Tipo | Problema que resuelve | Clases clave | Archivo |
 |---|---|---|---|---|
-| Trie con sufijos | O(K × M) | O(N × P × L̄) | Alto | ✅ Sí |
-| Hash Table simple | O(1) | O(N × P) | Medio | ❌ No |
-| Árbol B/B+ | O(log N) | O(log N) | Medio | ❌ No |
-| Inverted Index | O(K) | O(N × P) | Medio | ❌ No |
-| Fuerza bruta | O(N × L) | O(1) | Bajo | ✅ Sí |
-
-## Trade-off del Trie
-
-El Trie consume más memoria, pero permite:
-
-- búsquedas extremadamente rápidas
-- búsquedas por prefijo
-- búsquedas por subcadena
-- rendimiento independiente del tamaño del dataset
-
-Ideal para motores de búsqueda y autocompletado.
-
-# 5. Módulos del Sistema
-
-## Movie.h
-
-Struct que representa una película con datos originales y normalizados.
-
-| Campo | Descripción |
-|---|---|
-| `id` | Identificador único secuencial |
-| `title`, `genre`, `cast`, `director`, `plot` | Datos originales del CSV |
-| `normalizedTitle/Genre/Cast/Director/Plot` | Versiones procesadas para búsqueda |
-| `normalizedText` | Concatenación de todos los campos normalizados para indexación |
+| **Singleton** | Creacional | Una sola instancia global del motor y del bus de eventos | `SearchEngine`, `LikeEventBus` | `SearchEngine.h`, `LikeObserver.h` |
+| **Abstract Factory** | Creacional | Crear familias de objetos según el plan de suscripción | `IPlanFactory` a `PlanIndividualFactory`, `PlanFamiliarFactory` | `PlanFactory.h` |
+| **Strategy** (x2) | Comportamiento | Intercambiar el algoritmo de **ranking** y de **coincidencia** en tiempo de ejecución | `IRankingStrategy`, `ISearchMatchStrategy` | `RankingStrategy.*`, `SearchMatchStrategy.*` |
+| **Observer** | Comportamiento | Reaccionar a cada *like* sin acoplar el emisor a los consumidores | `LikeEventBus` + `ILikeObserver` | `LikeObserver.h` |
 
 ---
 
-## Utils
+## 1.1 Singleton
 
-Funciones de pre-procesamiento de texto.
+```cpp
+// SearchEngine.h — constructor privado + punto de acceso único
+private:
+    SearchEngine() = default;                         // nadie lo instancia
+public:
+    static SearchEngine& getInstance() {              // acceso global
+        static SearchEngine instance;                 // creada una sola vez
+        return instance;
+    }
+    SearchEngine(const SearchEngine&)            = delete;   // sin copias
+    SearchEngine& operator=(const SearchEngine&) = delete;
+```
 
-| Función | Descripción |
+| Regla del patrón | Cómo se garantiza |
 |---|---|
-| `normalizeAccents(s)` | Reemplaza caracteres acentuados y especiales por ASCII equivalente (soporta español, turco, alemán, etc.) |
-| `normalize(s)` | Aplica `normalizeAccents` + minúsculas + elimina caracteres no alfanuméricos + colapsa espacios múltiples |
-| `tokenize(text)` | Divide en palabras, filtra stopwords en inglés y palabras menores a 3 caracteres |
+| Instancia única | Variable `static` local en `getInstance()` (thread-safe en C++11 en adelante) |
+| Sin copias ni asignación | `= delete` en el constructor de copia y en `operator=` |
+| Acceso global | `SearchEngine::getInstance()` desde cualquier punto |
+
+`LikeEventBus` aplica el mismo patrón para centralizar la publicación de eventos de *like*.
 
 ---
 
-## Trie
+## 1.2 Abstract Factory
 
-Estructura principal de indexación.
+El usuario selecciona un **plan** y este produce una **familia coherente** de objetos (gestión de perfiles y reglas de actividad) sin que `main` conozca las clases concretas.
 
-| Método | Descripción | Complejidad Temporal |
+```text
+              IPlanFactory (abstracta)
+             /                        \
+ PlanIndividualFactory         PlanFamiliarFactory
+     |  crea                        |  crea
+     +-- PerfilIndividual           +-- PerfilFamiliar        (IGestorPerfiles)
+     +-- ActividadIndividual        +-- ActividadFamiliar     (IGestorActividad)
+```
+
+| Producto | Plan Individual | Plan Familiar |
 |---|---|---|
-| `insertSingleWord(id, word)` | Inserta palabra carácter a carácter en el Trie | `O(L)` |
-| `insertSuffixes(id, word)` | Genera hasta 6 sufijos de la palabra y los inserta | `O(6L) = O(L)` |
-| `insert(id, text)` | Normaliza, tokeniza e inserta todos los sufijos únicos | `O(P × 6L̄)` |
-| `search(query)` | Retorna IDs de películas que coinciden con el query | `O(K × M + R log R)` |
+| Máximo de perfiles | 1 | 5 |
+| Máximo de likes | 3 | Ilimitados |
+| Watchlist | No disponible | Sí (hasta 5) |
+
+```cpp
+// main.cpp — el cliente solo pide una fábrica; no conoce la clase concreta
+IPlanFactory* factory = seleccionarPlan();   // Individual o Familiar
+PlanSession   planSession(factory);          // arma toda la familia
+```
 
 ---
 
-## Parser
+## 1.3 Strategy (doble)
 
-Lectura robusta del CSV con campos multilínea.
+Dos ejes de comportamiento intercambiables en tiempo de ejecución.
 
-| Función | Descripción |
-|---|---|
-| `parseCSVLine(line)` | Parsea línea respetando campos entre comillas con comas internas |
-| `readCSVRows(file)` | Lee CSV completo manejando sinopsis multilínea (campos entre comillas que contienen saltos de línea) |
+**A) Ranking de resultados** — `IRankingStrategy`
 
----
+| Estrategia | Criterio | `nombre()` |
+|---|---|---|
+| `RelevanceRankingStrategy` | Puntaje ponderado por campo | `"Relevancia"` |
+| `AlphabeticalRankingStrategy` | Orden alfabético del título | `"Alfabetico (A-Z)"` |
 
-## SearchEngine
-
-Orquesta la carga de datos, indexación y ranking.
-
-| Método | Descripción |
-|---|---|
-| `loadCSV(filename)` | Carga el CSV, normaliza e indexa cada película en el Trie |
-| `search(query)` | Delega búsqueda al Trie |
-| `rankResults(ids, query)` | Ordena resultados por relevancia usando sistema de puntaje |
-| `getMovie(id)` | Retorna la película por ID |
-
-### Sistema de puntaje en `rankResults`
+Puntajes de la estrategia de relevancia:
 
 | Campo | Puntos |
 |---|---|
-| Título (query completo exacto) | `+20` |
-| Título (palabra individual) | `+10` |
-| Sinopsis | `+3` |
-| Género | `+2` |
-| Director | `+2` |
-| Cast | `+1` |
+| Título (frase completa) | +20 |
+| Título (palabra) | +10 |
+| Sinopsis | +3 |
+| Género | +2 |
+| Director | +2 |
+| Reparto | +1 |
+
+**B) Coincidencia de búsqueda** — `ISearchMatchStrategy`
+
+| Estrategia | Lógica | `nombre()` |
+|---|---|---|
+| `AllWordsMatchStrategy` | Todas las palabras (AND) | `"Todas las palabras (AND)"` |
+| `AnyWordMatchStrategy` | Cualquier palabra (OR) | `"Cualquier palabra (OR)"` |
+| `ExactPhraseMatchStrategy` | Subcadena exacta | `"Frase exacta"` |
+
+```cpp
+// SearchEngine.h — el motor delega en la estrategia inyectada
+void setRankingStrategy(IRankingStrategy* s) { delete rankingStrategy; rankingStrategy = s; }
+void setMatchStrategy  (ISearchMatchStrategy* s) { delete matchStrategy;   matchStrategy   = s; }
+```
 
 ---
 
-## UserManager
+## 1.4 Observer
 
-Gestión de usuarios mediante archivos `.txt` (uno por usuario).
+Cada *like* dispara un evento que se propaga a N observadores suscritos, sin acoplar `dar_me_gusta()` a ellos.
 
-| Función | Descripción |
+```text
+ dar_me_gusta()  --->  LikeEventBus.notify(LikeEvent)
+                            |  (Singleton)
+        +-------------------+-------------------+
+        v                   v                   v
+   LikeLogger         LikeCounter        GenreStatsObserver
+ (log en consola)  (conteo x usuario)  (top de géneros)
+```
+
+| Observador | Responsabilidad |
 |---|---|
-| `crear_usuario(nombre)` | Crea archivo `NombreUsuario.txt` |
-| `existe_usuario(nombre)` | Verifica existencia del archivo |
-| `dar_me_gusta(usuario, linea)` | Guarda like o "ver luego" en el archivo |
-| `mostrar_ver_despues(usuario)` | Muestra entradas con etiqueta `[ver luego]` |
-| `recomendar_por_likes(engine, usuario)` | Busca películas del género del último like |
-| `recomendaciones_nuevo(engine)` | Muestra 5 películas aleatorias para usuarios nuevos |
-| `buscarYDarLike(engine, usuario)` | Loop interactivo de búsqueda con paginación (5 resultados por página) |
+| `LikeLogger` | Imprime feedback en tiempo real |
+| `LikeCounter` | Cuenta likes por usuario en la sesión |
+| `GenreStatsObserver` | Ranking Top-N de géneros más likeados |
 
----
-
-## Formato del Archivo de Usuario
-
-```text
-[like] | Action, Adventure
-[ver luego] The Dark Knight
-[like] | Drama
-```
-
-# 6. Interfaz del Programa
-
-La aplicación utiliza una interfaz de línea de comandos (**CLI**) basada en menús interactivos para facilitar la navegación y búsqueda de películas.
-
----
-
-## 6.1 Pantalla de Inicio
-
-```text
-====================================
- Cargando base de datos...
-====================================
-Movies loaded: 34886
-
-====================================
-     STREAMING PLATFORM P3
-====================================
-[1] Ingresar usuario
-[2] Crear usuario
-[3] Salir
-====================================
-Seleccione:
+```cpp
+// main.cpp — la suscripción no obliga a modificar el emisor
+LikeEventBus::getInstance().subscribe(&likeLogger);
+LikeEventBus::getInstance().subscribe(&likeCounter);
+LikeEventBus::getInstance().subscribe(&genreStats);
 ```
 
 ---
 
-## 6.2 Flujo para Usuario Existente
+# 2. Programación Paralela
 
-Al ingresar con un usuario existente, el sistema:
+Dos técnicas combinadas en la carga de datos.
 
-1. Muestra mensaje de bienvenida
-2. Enseña la lista de películas guardadas en **"Ver después"**
-3. Genera recomendaciones basadas en el último like:
-    - `[like] | Género`
-4. Inicia el loop de búsqueda interactiva
+| Técnica | Dónde | Qué paraleliza |
+|---|---|---|
+| `std::thread` (chunks) | `SearchEngine::loadCSV` | Parseo y normalización de las 34,886 filas |
+| `std::async` | `main.cpp` | Solapa toda la carga con la interacción del usuario |
 
-### Resultados de Búsqueda
+## 2.1 Reparto en threads
 
-```text
-============= RESULTADOS =============
-1. The Dark Knight
-2. Batman Begins
-3. Inception
-4. Interstellar
-5. The Prestige
-======================================
-[1-5] Ver pelicula
-[9]   Ver mas
-[0]   Nueva busqueda
-======================================
-Seleccione:
+```cpp
+// SearchEngine.cpp
+unsigned h = thread::hardware_concurrency();        // núcleos disponibles
+for (unsigned t = 0; t < h; t++) {
+    int begin = 1 + t * totalRows / h;              // rango [begin, end)
+    int end   = 1 + (t + 1) * totalRows / h;
+    threads.emplace_back(&SearchEngine::processChunk, this, cref(rows), begin, end);
+}
+for (auto& th : threads) th.join();                 // barrera de sincronización
+```
+
+Cada thread escribe en su propio rango de índices de `movies`, por lo que no hay condiciones de carrera (no comparten posiciones).
+
+## 2.2 Carga asíncrona (solape con la interfaz)
+
+```cpp
+// main.cpp — la base de datos carga en segundo plano mientras el usuario
+// elige plan y gestiona perfiles
+future<void> res = async(launch::async, comencemos, std::ref(engine));
+...
+seleccionarPlan();                   // el usuario decide su plan
+planSession.menuGestionUsuarios();   // agrega o elimina perfiles
+res.get();                           // recién aquí se espera al fin de la carga
+```
+
+## 2.3 Decisión de diseño: el Trie no se paraleliza
+
+El `Trie` usa punteros crudos compartidos y no es thread-safe. Insertar en paralelo produciría condiciones de carrera, por lo que la construcción del árbol se mantiene secuencial de forma deliberada. Esta decisión explica los tiempos de la sección 6.
+
+---
+
+# 3. Programación Genérica
+
+| Mecanismo | Dónde | Qué generaliza |
+|---|---|---|
+| **Template de función** | `UserManager.h` | Recorrer líneas del archivo con cualquier callback |
+| **`std::function`** | `SearchEngine::searchByField` | Elegir el campo a buscar como parámetro |
+| **Polimorfismo de interfaz** | Strategy, Observer, Factory | Algoritmos intercambiables sin tocar el cliente |
+
+```cpp
+// UserManager.h — funciona con lambdas, functores o funciones libres
+template <typename Func>
+void leerLineasUsuario(const string& usuario, const string& prefijo, Func porLinea) {
+    ifstream file(usuario + ".txt");
+    string linea;
+    while (getline(file, linea))
+        if (linea.find(prefijo) != string::npos)
+            porLinea(linea);            // Func es genérico
+}
+```
+
+```cpp
+// SearchEngine.h — el getter del campo es un parámetro genérico
+using FieldGetter = function<string(const Movie&)>;
+Resultados searchByField(const string& query, FieldGetter fieldGetter);
+
+// uso: buscar solo por director, género, reparto o título con la misma función
+searchByField(q, [](const Movie& m){ return m.normalizedDirector; });
 ```
 
 ---
 
-## 6.3 Detalle de Película
+# 4. Árbol: Trie de Sufijos
 
-```text
-====================================
-The Dark Knight
-====================================
+Estructura principal de indexación. Permite búsqueda por prefijo y por subcadena en `O(m)`, de forma independiente del tamaño del dataset.
 
-SINOPSIS:
-[billionaire fights crime in gotham city...]
-
-====================================
-[1] Dar like
-[2] Ver despues
-[0] Volver
-====================================
-Seleccione:
+```cpp
+// Trie.h
+struct Node {
+    unordered_map<char, Node*> children;   // aristas por carácter
+    vector<int> movieIDs;                  // películas que pasan por el nodo
+};
 ```
 
+**Inserción con sufijos** (`Trie.cpp`): por cada palabra se generan hasta **6 sufijos**, cada uno con longitud **mayor o igual a 3**.
+
+| Palabra `"warcraft"` a sufijo | Longitud | ¿Insertado? |
+|---|---|---|
+| `warcraft` | 8 | Sí |
+| `arcraft` | 7 | Sí |
+| `rcraft` | 6 | Sí |
+| `craft` | 5 | Sí |
+| `raft` | 4 | Sí |
+| `aft` | 3 | Sí |
+| `ft` | 2 | No (menor a 3) |
+
+Buscar `"war"` encuentra coincidencias como `warcraft`, `star wars` o `war`. El límite de 6 sufijos balancea la cobertura de búsqueda frente al consumo de memoria.
+
+## Complejidad
+
+| Operación | Tiempo | Espacio |
+|---|---|---|
+| Indexación completa | O(N · P · L̄) | O(T) |
+| Búsqueda simple | O(M + R log R) | O(R) |
+| Búsqueda compuesta | O(K · M + R log R) | O(R) |
+| Ranking | O(R · (Q + L̄) + R log R) | O(R) |
+| Like / Ver después | O(1) amortizado | O(1) |
+
+Donde `N` = películas, `P` = palabras únicas por película, `L̄` = longitud media de palabra, `K` = palabras del query, `M` = longitud media del query, `R` = resultados, `T` = nodos del Trie.
+
 ---
 
-## 6.4 Flujo para Nuevo Usuario
+# 5. Interfaz y Herramientas
 
-Cuando se crea un nuevo usuario, el sistema:
-
-1. Solicita un nombre de usuario
-2. Muestra 5 películas aleatorias como recomendaciones iniciales
-3. Permite acceso inmediato al loop de búsqueda
-
----
-
-## 6.5 Diagrama de Flujo
+La aplicación es una interfaz de línea de comandos (CLI) basada en menús. Flujo completo con todas las herramientas:
 
 ```text
-Inicio
-  └── Cargar CSV → Indexar en Trie (34,886 películas)
-        └── Menú Principal
-              ├── [1] Ingresar usuario
-              │     ├── Mostrar "Ver después"
-              │     ├── Recomendar por último like
-              │     └── Loop de búsqueda con paginación
-              ├── [2] Crear usuario
-              │     ├── 5 películas aleatorias
-              │     └── Loop de búsqueda con paginación
-              └── [3] Salir
+main
+ |- async: loadCSV() ------------> (carga en segundo plano)
+ |- [Abstract Factory] seleccionarPlan()  -> Individual / Familiar
+ |- [Observer] suscribir LikeLogger, LikeCounter, GenreStatsObserver
+ |- PlanSession.menuGestionUsuarios()      -> agregar / eliminar perfiles
+ |- res.get()  <---- espera fin de carga
+ |- Menú principal
+     |- [1] Ingresar usuario
+     |     |- recomendaciones (por último like / aleatorias)
+     |     |- mostrar "Ver después"
+     |     |- búsqueda
+     |          |- [1] general       -> buscarYDarLike()
+     |          |- [2] por categoría -> buscarPorCategoria()  (Strategy de match)
+     |- [2] Gestionar usuario
+     |- [3] Salir -> LikeCounter.resumen() + GenreStats.top(5)  (Observer)
 ```
+
+| Herramienta | Acción | Patrón o técnica que la soporta |
+|---|---|---|
+| Selección de plan | Individual o Familiar | Abstract Factory |
+| Gestión de perfiles | Crear o eliminar según el límite del plan | Abstract Factory |
+| Búsqueda general | Título, palabra, frase, subcadena | Trie + Strategy (ranking) |
+| Búsqueda por categoría | Director, Género, Reparto, Título | `searchByField` (genérico) + Strategy (match) |
+| Like / Ver después | Guardar en `usuario.txt` | Observer (eventos) |
+| Recomendaciones | Por último like o aleatorias | — |
+| Resumen de sesión | Top de géneros y conteo de likes | Observer |
 
 ---
 
-# 7. Decisiones Técnicas
+# 6. Comparación de Tiempos: Entrega Anterior vs Entrega Final
 
-| Decisión | Justificación |
-|---|---|
-| Trie con sufijos (hasta 6) | Permite búsqueda de subcadenas sin realizar full-text scan. Limitar a 6 balancea cobertura y memoria. |
-| Normalización extensiva de acentos | El dataset contiene películas en múltiples idiomas con caracteres especiales. |
-| `movies.reserve(rows.size())` | Evita realocaciones del vector durante la carga masiva del CSV. |
-| `allResults.reserve(2000)` | Reduce realocaciones frecuentes durante búsquedas grandes. |
-| Stopwords en tokenizer | Filtra palabras comunes (`the`, `and`, `of`) que generan ruido y aumentan innecesariamente el Trie. |
-| Persistencia en `.txt` | Permite guardar estado sin dependencias externas como SQLite o JSON. |
-| Ranking por puntaje | Prioriza coincidencias en títulos sobre sinopsis, mejorando la relevancia de resultados. |
+La entrega anterior cargaba los datos de forma **secuencial** (un solo bucle que parseaba, normalizaba e insertaba en el Trie, bloqueante y sin medición de tiempos). La entrega final incorpora parseo **paralelo**, Trie secuencial, instrumentación con `chrono` y carga **asíncrona**.
+
+## 6.1 Medición sobre el dataset completo (34,886 películas)
+
+Medición tomada con optimización `-O2`, promedio de tres corridas, sobre un entorno de un núcleo. La entrega anterior no instrumentaba el tiempo por fase (todo ocurría en un único bucle), por lo que de ella solo se dispone del total. La entrega final sí mide cada fase con `chrono`.
+
+**Comparación del tiempo total de carga**
+
+| Versión | Modelo de carga | Total |
+|---|---|---|
+| Anterior | Secuencial, un solo bucle, sin instrumentación | 24.51 s |
+| Final | Parseo en threads + Trie secuencial + carga asíncrona | 22.26 s |
+
+**Desglose por fase de la entrega final** (instrumentado con `chrono`)
+
+| Fase | Tiempo | ¿Paralelizable? |
+|---|---|---|
+| Lectura del CSV | 0.11 s | No (operación de E/S) |
+| Parseo y normalización | 1.89 s | Sí (mediante threads) |
+| Construcción del Trie | 20.25 s | No (Trie no thread-safe) |
+| **Total** | **22.26 s** | |
+
+El desglose permite identificar dónde se concentra el tiempo; la escalabilidad en varios núcleos se proyecta en la sección 6.2.
+
+## 6.2 Proyección con la Ley de Amdahl
+
+Solo el parseo (1.89 s en un núcleo) escala con la cantidad de núcleos. El resto (lectura más construcción del Trie, aproximadamente 20.36 s) es serial.
+
+$$T(p) = T_{serial} + \frac{T_{par}}{p} = 20.36 + \frac{1.89}{p}\ \ [\text{s}]$$
+
+$$S(p) = \frac{1}{(1-f) + \dfrac{f}{p}}, \qquad f = \frac{1.89}{22.26} \approx 0.085$$
+
+| Núcleos (p) | Tiempo de carga proyectado | Speedup del parseo | Speedup total |
+|---|---|---|---|
+| 1 | 22.26 s | 1.00x | 1.00x |
+| 2 | 21.31 s | 2.00x | 1.04x |
+| 4 | 20.83 s | 4.00x | 1.07x |
+| 8 | 20.60 s | 8.00x | 1.08x |
+| Infinito | 20.36 s | ∞ | 1.09x (techo) |
+
+La paralelización del parseo aporta poco al tiempo total porque la construcción del Trie domina (cerca del 91 por ciento) y es serial. El techo teórico de la paralelización, según Amdahl, es aproximadamente 1.09x.
+
+## 6.3 Ganancia principal: solape asíncrono
+
+El uso de `std::async` oculta la carga detrás de la interacción del usuario (selección de plan y gestión de perfiles):
+
+$$T_{percibido} = \max\bigl(0,\ T_{carga} - T_{interaccion\ usuario}\bigr)$$
+
+Si el usuario tarda más de 22 segundos aproximadamente eligiendo su plan y sus perfiles, la espera percibida tiende a cero. Esta es la mejora de experiencia frente a la entrega anterior, que bloqueaba la ejecución hasta terminar de cargar.
+
+---
+
+# 7. Compilación
+
+```bash
+cmake -B build && cmake --build build
+./build/Entregable1        # requiere Data/wiki_movie_plots_deduped.csv
+```
+
+Requisitos: C++17, CMake 3.30 o superior. El paralelismo emplea `<thread>` y `<future>` de la biblioteca estándar, sin dependencias externas.
