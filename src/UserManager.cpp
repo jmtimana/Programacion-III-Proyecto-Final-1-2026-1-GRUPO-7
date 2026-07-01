@@ -57,9 +57,9 @@ void buscarYDarLike(SearchEngine& engine, const string& usuario) {
         if (query == "exit")
             break;
 
-        vector<int> res = engine.search(query);
+        Resultados res = engine.search(query);
 
-        vector<int> ids =
+        Resultados ids =
             engine.rankResults(res, query);
 
         if (ids.empty()) {
@@ -75,7 +75,7 @@ void buscarYDarLike(SearchEngine& engine, const string& usuario) {
 
             cout << "\n============= RESULTADOS =============\n";
 
-            vector<int> visibles;
+            Resultados visibles;
 
             for (
                 int i = 0;
@@ -128,12 +128,10 @@ void buscarYDarLike(SearchEngine& engine, const string& usuario) {
 
             int op = atoi(entrada.c_str());
 
-            // nueva búsqueda
-            if (op == 0)
+            if (op == NUEVA_BUSQUEDA)
                 break;
 
-            // siguientes 5
-            if (op == 9)
+            if (op == VER_MAS)
                 continue;
 
             // película válida
@@ -187,25 +185,25 @@ void buscarYDarLike(SearchEngine& engine, const string& usuario) {
                         '\n'
                     );
 
-                    if (accion == 0)
+                    if (static_cast<MovieAction>(accion) == MovieAction::VOLVER)
                         break;
 
-                    if (accion == 1) {
+                    if (static_cast<MovieAction>(accion) == MovieAction::DAR_LIKE) {
 
                         dar_me_gusta(
                             usuario,
-                            "[like] | " +
+                            string(LIKE_PREFIX) +
                             engine.getMovie(elegido).genre
                         );
 
                         break;
                     }
 
-                    if (accion == 2) {
+                    if (static_cast<MovieAction>(accion) == MovieAction::VER_DESPUES) {
 
                         dar_me_gusta(
                             usuario,
-                            "[ver luego] " +
+                            string(VER_DESPUES_PREFIX) +
                             engine.getMovie(elegido).title
                         );
 
@@ -258,23 +256,24 @@ void buscarPorCategoria(SearchEngine& engine, const string& usuario) {
 
         if (op == 0) break;
 
-        function<string(const Movie&)> getter;
+        FieldGetter getter;
         string nombreCampo;
+        CampoBusqueda campo = static_cast<CampoBusqueda>(op);
 
-        switch (op) {
-            case 1:
+        switch (campo) {
+            case CampoBusqueda::DIRECTOR:
                 getter = [](const Movie& m) { return m.normalizedDirector; };
                 nombreCampo = "director";
                 break;
-            case 2:
+            case CampoBusqueda::GENERO:
                 getter = [](const Movie& m) { return m.normalizedGenre; };
                 nombreCampo = "genero";
                 break;
-            case 3:
+            case CampoBusqueda::REPARTO:
                 getter = [](const Movie& m) { return m.normalizedCast; };
                 nombreCampo = "reparto";
                 break;
-            case 4:
+            case CampoBusqueda::TITULO:
                 getter = [](const Movie& m) { return m.normalizedTitle; };
                 nombreCampo = "titulo";
                 break;
@@ -345,7 +344,7 @@ void buscarPorCategoria(SearchEngine& engine, const string& usuario) {
 
             if (query == "exit" || query == "0" || query == "volver") break;
 
-            vector<int> ids = engine.searchByField(query, getter);
+            Resultados ids = engine.searchByField(query, getter);
 
             if (ids.empty()) {
                 cout << "\nNo hay resultados.\n";
@@ -358,7 +357,7 @@ void buscarPorCategoria(SearchEngine& engine, const string& usuario) {
 
                 cout << "\n============= RESULTADOS =============\n";
 
-                vector<int> visibles;
+                Resultados visibles;
 
                 for (
                     int i = 0;
@@ -396,8 +395,8 @@ void buscarPorCategoria(SearchEngine& engine, const string& usuario) {
 
                 int accion = atoi(entrada.c_str());
 
-                if (accion == 0) break;
-                if (accion == 9) continue;
+                if (accion == NUEVA_BUSQUEDA) break;
+                if (accion == VER_MAS) continue;
 
                 if (accion >= 1 && accion <= visibles.size()) {
 
@@ -432,25 +431,25 @@ void buscarPorCategoria(SearchEngine& engine, const string& usuario) {
 
                         int acc = atoi(accStr.c_str());
 
-                        if (acc == 0) break;
+                    if (static_cast<MovieAction>(acc) == MovieAction::VOLVER) break;
 
-                        if (acc == 1) {
-                            dar_me_gusta(
-                                usuario,
-                                "[like] | " +
-                                engine.getMovie(elegido).genre
-                            );
-                            break;
-                        }
+                    if (static_cast<MovieAction>(acc) == MovieAction::DAR_LIKE) {
+                        dar_me_gusta(
+                            usuario,
+                            string(LIKE_PREFIX) +
+                            engine.getMovie(elegido).genre
+                        );
+                        break;
+                    }
 
-                        if (acc == 2) {
-                            dar_me_gusta(
-                                usuario,
-                                "[ver luego] " +
-                                engine.getMovie(elegido).title
-                            );
-                            break;
-                        }
+                    if (static_cast<MovieAction>(acc) == MovieAction::VER_DESPUES) {
+                        dar_me_gusta(
+                            usuario,
+                            string(VER_DESPUES_PREFIX) +
+                            engine.getMovie(elegido).title
+                        );
+                        break;
+                    }
 
                         cout << "\nOpcion invalida.\n";
                     }
@@ -488,43 +487,25 @@ void recomendaciones_nuevo(SearchEngine& engine) {
 }
 
 string obtener_ultimo_like(const string& usuario) {
-    ifstream file(usuario + ".txt");
-    string linea, ultima;
-
-    while (getline(file, linea)) {
-        if (linea.find("[like]") != string::npos) {
-            ultima = linea;
-        }
-    }
-
-    file.close();
+    string ultima;
+    leerLineasUsuario(usuario, LIKE_TAG, [&](const string& linea) {
+        ultima = linea;
+    });
     return ultima;
 }
 bool tiene_likes(const string& usuario) {
-    ifstream file(usuario + ".txt");
-    string linea;
-
-    while (getline(file, linea)) {
-        if (linea.find("[like]") != string::npos) {
-            return true;
-        }
-    }
-    file.close();
-    return false;
-
+    bool encontrado = false;
+    leerLineasUsuario(usuario, LIKE_TAG, [&](const string&) {
+        encontrado = true;
+    });
+    return encontrado;
 }
 bool tiene_ver_despues(const string& usuario) {
-    ifstream file(usuario + ".txt");
-    string linea;
-
-    while (getline(file, linea)) {
-        if (linea.find("[ver luego]") != string::npos) {
-            return true;
-        }
-    }
-    file.close();
-    return false;
-
+    bool encontrado = false;
+    leerLineasUsuario(usuario, VER_DESPUES_TAG, [&](const string&) {
+        encontrado = true;
+    });
+    return encontrado;
 }
 
 string extraer_genero(const string& linea) {
@@ -539,20 +520,10 @@ void recomendar_por_likes(
     SearchEngine& engine,
     const string& usuario
 ) {
-    ifstream file(usuario + ".txt");
-    if (!file.is_open()) {
-        cout << "No hay likes previos.\n";
-        return;
-    }
-
     vector<string> likes;
-    string linea;
-    while (getline(file, linea)) {
-        if (linea.find("[like]") != string::npos) {
-            likes.push_back(linea);
-        }
-    }
-    file.close();
+    leerLineasUsuario(usuario, LIKE_TAG, [&](const string& linea) {
+        likes.push_back(linea);
+    });
 
     if (likes.empty()) {
         cout << "No hay likes previos.\n";
@@ -586,7 +557,7 @@ void recomendar_por_likes(
         }
     }
 
-    vector<int> ids;
+    Resultados ids;
     if (maxFreq == 1 && freq.size() >= 2) {
         generoElegido.clear();
         for (const string& g : generos) {
@@ -625,7 +596,7 @@ void dar_me_gusta(const string & nombre_usuario, const string& linea) {
         cout << "Pelicula guardada en tus likes.\n";
 
         // OBSERVER: notificar a todos los suscriptores si fue un like
-        if (linea.find("[like]") != string::npos) {
+        if (linea.find(LIKE_TAG) != string::npos) {
             // Extraer el genero de la linea "[like] | Genero"
             size_t pos = linea.find("|");
             string genero = (pos != string::npos)
@@ -639,26 +610,14 @@ void dar_me_gusta(const string & nombre_usuario, const string& linea) {
 }
 
 void mostrar_ver_despues(const string& nombre_usuario, int m) {
-    string archivo = nombre_usuario + ".txt";
-    ifstream file(archivo);
-    if (!file.is_open()) {
-        cout << "No se pudo abrir el archivo.\n";
-        return;
-    }
     stack<string> peliculas_ver_despues;
-    string linea;
+    leerLineasUsuario(nombre_usuario, VER_DESPUES_TAG, [&](const string& linea) {
+        peliculas_ver_despues.push(linea);
+    });
     cout << "\n--- PELICULAS PARA VER DESPUES ---\n";
-    while (getline(file, linea)) {
-        if (linea.find("[ver luego]") != string::npos) {
-            peliculas_ver_despues.push(linea);
-        }
-    }
-    file.close();
     int limite = min(m, (int)peliculas_ver_despues.size());
     for (int i = 0; i < limite; i++) {
-        string mayor = peliculas_ver_despues.top();
+        cout << peliculas_ver_despues.top() << endl;
         peliculas_ver_despues.pop();
-        cout << mayor << endl;
     }
-
 }

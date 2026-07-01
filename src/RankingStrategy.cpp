@@ -2,6 +2,13 @@
 #include "../include/Utils.h"
 #include <algorithm>
 
+constexpr int SCORE_TITLE_EXACT = 20;
+constexpr int SCORE_TITLE_WORD = 10;
+constexpr int SCORE_PLOT_WORD = 3;
+constexpr int SCORE_GENRE_WORD = 2;
+constexpr int SCORE_DIRECTOR_WORD = 2;
+constexpr int SCORE_CAST_WORD = 1;
+
 std::vector<int> RelevanceRankingStrategy::rank(
     const std::vector<int>& ids,
     const std::string& query,
@@ -17,19 +24,19 @@ std::vector<int> RelevanceRankingStrategy::rank(
 
         for (const std::string& word : queryWords) {
             if (movie.normalizedTitle.find(word) != std::string::npos)
-                score += 10;
+                score += SCORE_TITLE_WORD;
             if (movie.normalizedPlot.find(word) != std::string::npos)
-                score += 3;
+                score += SCORE_PLOT_WORD;
             if (movie.normalizedGenre.find(word) != std::string::npos)
-                score += 2;
+                score += SCORE_GENRE_WORD;
             if (movie.normalizedDirector.find(word) != std::string::npos)
-                score += 2;
+                score += SCORE_DIRECTOR_WORD;
             if (movie.normalizedCast.find(word) != std::string::npos)
-                score += 1;
+                score += SCORE_CAST_WORD;
         }
 
         if (movie.normalizedTitle.find(fullQuery) != std::string::npos)
-            score += 20;
+            score += SCORE_TITLE_EXACT;
 
         scored.push_back({score, id});
     }

@@ -113,8 +113,10 @@ int main() {
             '\n'
         );
 
-        // INGRESAR USUARIO
-        if (opcion == 1) {
+        enum class MainMenuOp { INGRESAR_USUARIO = 1, GESTIONAR_USUARIO = 2, SALIR = 3 };
+        MainMenuOp opcionMenu = static_cast<MainMenuOp>(opcion);
+
+        if (opcionMenu == MainMenuOp::INGRESAR_USUARIO) {
             planSession.mostrar_perfiles();
             cout << "\nIngrese usuario: ";
 
@@ -192,13 +194,12 @@ int main() {
             }
         }
 
-        // Gestion de usarios
-        else if (opcion == 2) {
+        else if (opcionMenu == MainMenuOp::GESTIONAR_USUARIO) {
             planSession.menuGestionUsuarios();
 
         }
 
-        else if (opcion == 3) {
+        else if (opcionMenu == MainMenuOp::SALIR) {
             likeCounter.mostrarResumen();
             genreStats.mostrarTop(5);
 

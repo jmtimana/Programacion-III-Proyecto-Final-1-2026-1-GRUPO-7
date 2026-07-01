@@ -178,23 +178,23 @@ void SearchEngine::loadCSV(const string& filename)
          << endl;
 }
 
-vector<int> SearchEngine::search(const string& query) {
+Resultados SearchEngine::search(const string& query) {
 
     vector<int> result = trie.search(query);
 
-    return vector<int>(result.begin(), result.end());
+    return Resultados(result.begin(), result.end());
 }
 
-vector<int> SearchEngine::searchByField(
+Resultados SearchEngine::searchByField(
     const string& query,
-    function<string(const Movie&)> fieldGetter
+    FieldGetter fieldGetter
 ) {
     vector<int> candidates = trie.search(query);
 
     vector<string> queryWords = tokenize(normalize(query));
     string fullQuery = normalize(query);
 
-    vector<int> filtered;
+    Resultados filtered;
     filtered.reserve(candidates.size());
 
     for (int id : candidates) {
@@ -213,7 +213,7 @@ Movie SearchEngine::getMovie(int id) {
     return movies[id];
 }
 
-vector<int> SearchEngine::rankResults( const vector<int>& ids, const string& query) {
+Resultados SearchEngine::rankResults( const Resultados& ids, const string& query) {
 
     return rankingStrategy->rank(ids, query, movies);
 }

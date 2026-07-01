@@ -9,6 +9,9 @@
 #include <atomic>
 using namespace std;
 
+using FieldGetter = function<string(const Movie&)>;
+using Resultados = vector<int>;
+
 class SearchEngine {
 
 private:
@@ -29,15 +32,15 @@ public:
 
     void loadCSV(const string& filename);
 
-    vector<int> search(const string& query);
+    Resultados search(const string& query);
 
-    vector<int> searchByField(
+    Resultados searchByField(
         const string& query,
-        function<string(const Movie&)> fieldGetter
+        FieldGetter fieldGetter
     );
 
-    vector<int> rankResults(
-        const vector<int>& ids,
+    Resultados rankResults(
+        const Resultados& ids,
         const string& query
         );
     void processChunk(
