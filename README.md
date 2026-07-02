@@ -25,6 +25,8 @@ Motor de búsqueda y gestión de películas en **C++17** sobre un dataset de **3
 
 # 1. Patrones de Diseño
 
+Al ver la necesidad de crear perfiles con restricciones según el plan de suscripción elegido, implementamos el patrón *Abstract Factory*. Según Gamma et al. (1994), este patrón es fundamental cuando un sistema debe ser independiente de cómo se crean, componen y representan sus productos, permitiendo intercambiar familias enteras de objetos de manera coherente sin que el cliente interactúe con clases concretas. Asimismo, para alternar entre lógicas de ordenamiento en la interfaz de comandos, aislamos los algoritmos de puntuación en componentes polimórficos; según Gamma et al. (1994), el patrón *Strategy* define una familia de algoritmos, encapsula cada uno y los vuelve intercambiables, permitiendo que la estrategia varíe independientemente de los clientes que la utilizan, lo cual se acopla al diseño de dependencias en nuestra clase `SearchEngine`.
+
 Se aplican cuatro patrones, cada uno resolviendo un problema concreto del sistema.
 
 | Patrón | Tipo | Problema que resuelve | Clases clave | Archivo |
@@ -163,6 +165,8 @@ Dos técnicas combinadas en la carga de datos.
 | `std::thread` (chunks) | `SearchEngine::loadCSV` | Parseo y normalización de las 34,886 filas |
 | `std::async` | `main.cpp` | Solapa toda la carga con la interacción del usuario |
 
+Al paralelizar el parseo y la normalización de las filas mediante el uso distribuido de hilos concurrentes, maximizamos la ocupación de los núcleos de la CPU. Según Williams (2019), la clave para lograr una concurrencia de alto rendimiento radica en dividir las tareas de forma que se minimice el uso de mecanismos de sincronización bloqueantes y se maximice el aislamiento de los datos durante la ejecución. En nuestro proyecto, este principio se garantiza asignando rangos indexados independientes a cada hilo, evitando colisiones de memoria en el vector global. 
+
 ## 2.1 Reparto en threads
 
 ```cpp
@@ -215,6 +219,7 @@ void leerLineasUsuario(const string& usuario, const string& prefijo, Func porLin
             porLinea(linea);            // Func es genérico
 }
 ```
+Implementamos componentes parametrizados en tiempo de compilación. La plantilla función `leerLineasUsuario` fue diseñada para procesar el historial de interacciones. Según Stroustrup (2018), el paradigma de la programación genérica consiste en centrarse en la formulación de algoritmos de forma abstracta, de modo que funcionen con una amplia gama de tipos de datos sin sacrificar la eficiencia de la máquina ni generar sobrecarga en tiempo de ejecución.
 
 ```cpp
 // SearchEngine.h — el getter del campo es un parámetro genérico
@@ -224,6 +229,8 @@ Resultados searchByField(const string& query, FieldGetter fieldGetter);
 // uso: buscar solo por director, género, reparto o título con la misma función
 searchByField(q, [](const Movie& m){ return m.normalizedDirector; });
 ```
+
+Al filtrar por categorías como director, género o reparto se estructuró la lectura con (`FieldGetter`). Según Stroustrup (2018), el uso de abstracciones funcionales robustas eleva la cohesión del diseño de software, permitiendo vincular limpiamente las estructuras lógicas del motor con los datos físicos subyacentes de la entidad `Movie`.
 
 ---
 
@@ -252,6 +259,8 @@ struct Node {
 | `ft` | 2 | No (menor a 3) |
 
 Buscar `"war"` encuentra coincidencias como `warcraft`, `star wars` o `war`. El límite de 6 sufijos balancea la cobertura de búsqueda frente al consumo de memoria.
+
+La recuperación de películas mediante subcadenas (como buscar "bar" y recuperar coincidencias exactas como "warcraft") requería una estructura indexada superior. Para resolver esto de manera óptima, desarrollamos un Trie modificado con la generación e inserción de hasta 6 sufijos decrecientes por token. Según Cormen et al. (2009), los algoritmos de correspondencia de patrones por fuerza bruta sufren de una ineficiencia crítica al depender linealmente del tamaño total del corpus analizado, mientras que las estructuras de búsqueda digital o árboles de prefijos permiten realizar búsquedas cuyo costo computacional depende estrictamente de la longitud de la clave consultada. En nuestra implementación, la complejidad temporal se reduce a un $O(m)$, donde $m$ representa la longitud de la consulta.
 
 ## Complejidad
 
@@ -363,3 +372,10 @@ cmake -B build && cmake --build build
 ```
 
 Requisitos: C++17, CMake 3.30 o superior. El paralelismo emplea `<thread>` y `<future>` de la biblioteca estándar, sin dependencias externas.
+
+# 8. Referencias Bibliográficas
+
+* Cormen, T. H., Leiserson, C. E., Rivest, R. L., & Stein, C. (2009). *Introduction to Algorithms* (3rd ed.). MIT Press.
+* Gamma, E., Helm, R., Johnson, R., & Vlissides, J. (1994). *Design Patterns: Elements of Reusable Object-Oriented Software*. Addison-Wesley.
+* Stroustrup, B. (2018). *A Tour of C++* (2nd ed.). Addison-Wesley.
+* Williams, A. (2019). *C++ Concurrency in Action* (2nd ed.). Manning Publications.
