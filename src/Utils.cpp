@@ -4,7 +4,7 @@
 
 string normalizeAccents(string s) {
 
-    vector<vector<string>> groups = {
+    static const vector<vector<string>> groups = {
 
         {"á", "à", "ä","ä", "â", "ã", "å", "Á", "À", "Ä", "Â", "Ã", "Å","a"},
         {"ó", "ò", "ö", "ô", "õ", "ø","Ó", "Ò", "Ö", "Ô", "Õ", "Ø","o"},
@@ -80,7 +80,7 @@ string normalize(string s) {
     return clean;
 }
 
-unordered_set<string> stopwords = {
+const unordered_set<string> stopwords = {
     // Artículos y determinantes
     "the", "a", "an", "this", "that", "these", "those",
 
@@ -118,7 +118,10 @@ unordered_set<string> stopwords = {
     "ref", "cite", "url", "accessed", "retrieved",
 
     // Números ordinales/cardinales genéricos
-    "one", "two", "first", "second"
+    "one", "two", "first", "second",
+
+    // Valores vacíos del dataset
+    "unknown"
 };
 
 vector<string> tokenize(const string& text) {

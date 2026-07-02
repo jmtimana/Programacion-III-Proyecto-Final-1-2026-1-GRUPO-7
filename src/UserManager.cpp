@@ -1,45 +1,44 @@
 #include "../include/UserManager.h"
+#include "../include/LikeObserver.h"
+#include "../include/RankingStrategy.h"
+#include "../include/SearchMatchStrategy.h"
 #include <iostream>
 #include <fstream>
 #include <algorithm>
 #include <limits>
 #include <cstdlib>
 #include <cctype>
+#include <stack>
 
 #include "../include/Utils.h"
-
-void crear_usuario(const string& nombreArchivo) {
-
-    ifstream archivoLectura(nombreArchivo);
-
-    if (archivoLectura.good()) {
-
-        cout << "El usuario ya existe" << endl;
-
-        archivoLectura.close();
-
-        return;
-    }
-
-    archivoLectura.close();
-
-    ofstream archivoEscritura(nombreArchivo);
-
-    if (archivoEscritura.is_open()) {
-
-        archivoEscritura.close();
-
-        cout << "Archivo creado correctamente." << endl;
-
-    } else {
-
-        cout << "Error al crear el archivo." << endl;
-    }
-}
 
 void buscarYDarLike(SearchEngine& engine, const string& usuario) {
 
     string query;
+
+    cout << "\n====================================\n";
+    cout << "Orden:\n";
+    cout << "[1] Relevancia\n";
+    cout << "[2] Alfabetico (A-Z)\n";
+    cout << "[0] Volver\n";
+    cout << "====================================\n";
+    cout << "Seleccione: ";
+
+    string estrategiaInput;
+    getline(cin, estrategiaInput);
+
+     if (estrategiaInput == "0") return;
+
+    if (estrategiaInput == "1") {
+        engine.setRankingStrategy(new RelevanceRankingStrategy());
+    } else if (estrategiaInput == "2") {
+        engine.setRankingStrategy(new AlphabeticalRankingStrategy());
+    } else {
+        cout << "\n Opcion invalida. Se usará Relevancia por defecto.\n";
+        engine.setRankingStrategy(new RelevanceRankingStrategy());
+    }
+
+    cout << "Orden: " << engine.rankingStrategyNombre() << "\n";
 
     while (true) {
 
@@ -62,9 +61,9 @@ void buscarYDarLike(SearchEngine& engine, const string& usuario) {
         if (query == "exit")
             break;
 
-        vector<int> res = engine.search(query);
+        Resultados res = engine.search(query);
 
-        vector<int> ids =
+        Resultados ids =
             engine.rankResults(res, query);
 
         if (ids.empty()) {
@@ -80,7 +79,7 @@ void buscarYDarLike(SearchEngine& engine, const string& usuario) {
 
             cout << "\n============= RESULTADOS =============\n";
 
-            vector<int> visibles;
+            Resultados visibles;
 
             for (
                 int i = 0;
@@ -133,12 +132,10 @@ void buscarYDarLike(SearchEngine& engine, const string& usuario) {
 
             int op = atoi(entrada.c_str());
 
-            // nueva búsqueda
-            if (op == 0)
+            if (op == NUEVA_BUSQUEDA)
                 break;
 
-            // siguientes 5
-            if (op == 9)
+            if (op == VER_MAS)
                 continue;
 
             // película válida
@@ -192,25 +189,25 @@ void buscarYDarLike(SearchEngine& engine, const string& usuario) {
                         '\n'
                     );
 
-                    if (accion == 0)
+                    if (static_cast<MovieAction>(accion) == MovieAction::VOLVER)
                         break;
 
-                    if (accion == 1) {
+                    if (static_cast<MovieAction>(accion) == MovieAction::DAR_LIKE) {
 
                         dar_me_gusta(
                             usuario,
-                            "[like] | " +
+                            string(LIKE_PREFIX) +
                             engine.getMovie(elegido).genre
                         );
 
                         break;
                     }
 
-                    if (accion == 2) {
+                    if (static_cast<MovieAction>(accion) == MovieAction::VER_DESPUES) {
 
                         dar_me_gusta(
                             usuario,
-                            "[ver luego] " +
+                            string(VER_DESPUES_PREFIX) +
                             engine.getMovie(elegido).title
                         );
 
@@ -224,6 +221,253 @@ void buscarYDarLike(SearchEngine& engine, const string& usuario) {
             else {
 
                 cout << "\nOpcion invalida.\n";
+            }
+        }
+    }
+}
+
+void buscarPorCategoria(SearchEngine& engine, const string& usuario) {
+
+    while (true) {
+
+        cout << "\n=========== BUSQUEDA POR CATEGORIA ===========\n";
+        cout << "[1] Director\n";
+        cout << "[2] Genero\n";
+        cout << "[3] Reparto\n";
+        cout << "[4] Titulo\n";
+        cout << "[0] Volver\n";
+        cout << "==============================================\n";
+        cout << "Seleccione: ";
+
+        string entrada;
+        getline(cin, entrada);
+
+        if (entrada.empty()) {
+            cout << "\nOpcion invalida.\n";
+            continue;
+        }
+
+        bool esNumero = true;
+        for (char c : entrada) {
+            if (!isdigit(c)) { esNumero = false; break; }
+        }
+        if (!esNumero) {
+            cout << "\nOpcion invalida.\n";
+            continue;
+        }
+
+        int op = atoi(entrada.c_str());
+
+        if (op == 0) break;
+
+        FieldGetter getter;
+        string nombreCampo;
+        CampoBusqueda campo = static_cast<CampoBusqueda>(op);
+
+        switch (campo) {
+            case CampoBusqueda::DIRECTOR:
+                getter = [](const Movie& m) { return m.normalizedDirector; };
+                nombreCampo = "director";
+                break;
+            case CampoBusqueda::GENERO:
+                getter = [](const Movie& m) { return m.normalizedGenre; };
+                nombreCampo = "genero";
+                break;
+            case CampoBusqueda::REPARTO:
+                getter = [](const Movie& m) { return m.normalizedCast; };
+                nombreCampo = "reparto";
+                break;
+            case CampoBusqueda::TITULO:
+                getter = [](const Movie& m) { return m.normalizedTitle; };
+                nombreCampo = "titulo";
+                break;
+            default:
+                cout << "\nOpcion invalida.\n";
+                continue;
+        }
+
+        cout << "\n====================================\n";
+        cout << "Coincidencia:\n";
+        cout << "[1] Buscar por todas las palabras\n";
+        cout << "[2] Buscar por cualquier palabra\n";
+        cout << "[3] Frase exacta\n";
+        cout << "[0] Volver\n";
+        cout << "====================================\n";
+        cout << "Seleccione: ";
+
+        string matchInput;
+        getline(cin, matchInput);
+
+         if (matchInput == "0") continue;
+
+        if (matchInput == "1") {
+            engine.setMatchStrategy(new AllWordsMatchStrategy());
+        } else if (matchInput == "2") {
+            engine.setMatchStrategy(new AnyWordMatchStrategy());
+        } else if (matchInput == "3") {
+            engine.setMatchStrategy(new ExactPhraseMatchStrategy());
+        } else {
+            cout << "\nOpcion inválida. Se usará Todas las palabras (AND) por defecto.\n";
+            engine.setMatchStrategy(new AllWordsMatchStrategy());
+        }
+
+        cout << "Coincidencia: " << engine.matchStrategyNombre() << "\n";
+
+        cout << "\n====================================\n";
+        cout << "Orden:\n";
+        cout << "[1] Relevancia\n";
+        cout << "[2] Alfabetico (A-Z)\n";
+        cout << "[0] Volver\n";
+        cout << "====================================\n";
+        cout << "Seleccione: ";
+
+        string rankInput;
+        getline(cin, rankInput);
+
+         if (rankInput == "0") continue;
+
+        if (rankInput == "1") {
+            engine.setRankingStrategy(new RelevanceRankingStrategy());
+        } else if (rankInput == "2") {
+            engine.setRankingStrategy(new AlphabeticalRankingStrategy());
+        } else {
+            cout << "\nOpcion invalida. Se usara Relevancia por defecto.\n";
+            engine.setRankingStrategy(new RelevanceRankingStrategy());
+        }
+
+        cout << "Orden: " << engine.rankingStrategyNombre() << "\n";
+
+        string query;
+
+        while (true) {
+
+            cout << "\n====================================\n";
+            cout << "Buscar por " << nombreCampo
+                 << " ('exit' para volver)\n";
+            cout << "====================================\n";
+            cout << "Busqueda: ";
+
+            getline(cin, query);
+
+            if (query.empty()) {
+                cout << "\nIngrese una busqueda valida.\n";
+                continue;
+            }
+
+            if (query == "exit" || query == "0" || query == "volver") break;
+
+            Resultados ids = engine.searchByField(query, getter);
+
+            if (ids.empty()) {
+                cout << "\nNo hay resultados.\n";
+                continue;
+            }
+
+            int index = 0;
+
+            while (index < ids.size()) {
+
+                cout << "\n============= RESULTADOS =============\n";
+
+                Resultados visibles;
+
+                for (
+                    int i = 0;
+                    i < 5 && index < ids.size();
+                    i++, index++
+                ) {
+                    cout << i + 1 << ". "
+                         << engine.getMovie(ids[index]).title
+                         << endl;
+                    visibles.push_back(ids[index]);
+                }
+
+                cout << "======================================\n";
+                cout << "[1-5] Ver pelicula\n";
+                cout << "[9]   Ver mas\n";
+                cout << "[0]   Nueva busqueda\n";
+                cout << "======================================\n";
+                cout << "Seleccione: ";
+
+                getline(cin, entrada);
+
+                if (entrada.empty()) {
+                    cout << "\nOpcion invalida.\n";
+                    continue;
+                }
+
+                esNumero = true;
+                for (char c : entrada) {
+                    if (!isdigit(c)) { esNumero = false; break; }
+                }
+                if (!esNumero) {
+                    cout << "\nOpcion invalida.\n";
+                    break;
+                }
+
+                int accion = atoi(entrada.c_str());
+
+                if (accion == NUEVA_BUSQUEDA) break;
+                if (accion == VER_MAS) continue;
+
+                if (accion >= 1 && accion <= visibles.size()) {
+
+                    int elegido = visibles[accion - 1];
+
+                    cout << "\n====================================\n";
+                    cout << engine.getMovie(elegido).title << endl;
+                    cout << "====================================\n";
+                    cout << "\nSINOPSIS:\n\n";
+                    cout << normalize(engine.getMovie(elegido).plot) << endl;
+
+                    while (true) {
+
+                        cout << "\n====================================\n";
+                        cout << "[1] Dar like\n";
+                        cout << "[2] Ver despues\n";
+                        cout << "[0] Volver\n";
+                        cout << "====================================\n";
+                        cout << "Seleccione: ";
+
+                        string accStr;
+                        getline(cin, accStr);
+
+                        esNumero = true;
+                        for (char c : accStr) {
+                            if (!isdigit(c)) { esNumero = false; break; }
+                        }
+                        if (!esNumero) {
+                            cout << "\nOpcion invalida.\n";
+                            continue;
+                        }
+
+                        int acc = atoi(accStr.c_str());
+
+                    if (static_cast<MovieAction>(acc) == MovieAction::VOLVER) break;
+
+                    if (static_cast<MovieAction>(acc) == MovieAction::DAR_LIKE) {
+                        dar_me_gusta(
+                            usuario,
+                            string(LIKE_PREFIX) +
+                            engine.getMovie(elegido).genre
+                        );
+                        break;
+                    }
+
+                    if (static_cast<MovieAction>(acc) == MovieAction::VER_DESPUES) {
+                        dar_me_gusta(
+                            usuario,
+                            string(VER_DESPUES_PREFIX) +
+                            engine.getMovie(elegido).title
+                        );
+                        break;
+                    }
+
+                        cout << "\nOpcion invalida.\n";
+                    }
+                } else {
+                    cout << "\nOpcion invalida.\n";
+                }
             }
         }
     }
@@ -244,7 +488,7 @@ void recomendaciones_nuevo(SearchEngine& engine) {
 
     for (int i = 0; i < 5; i++) {
 
-        int m = rand() % 34886;
+        int m = rand() % engine.movieCount();
 
         cout << m << ". "
              << engine.getMovie(m).title
@@ -255,17 +499,25 @@ void recomendaciones_nuevo(SearchEngine& engine) {
 }
 
 string obtener_ultimo_like(const string& usuario) {
-    ifstream file(usuario + ".txt");
-    string linea, ultima;
-
-    while (getline(file, linea)) {
-        if (linea.find("[like]") != string::npos) {
-            ultima = linea;
-        }
-    }
-
-    file.close();
+    string ultima;
+    leerLineasUsuario(usuario, LIKE_TAG, [&](const string& linea) {
+        ultima = linea;
+    });
     return ultima;
+}
+bool tiene_likes(const string& usuario) {
+    bool encontrado = false;
+    leerLineasUsuario(usuario, LIKE_TAG, [&](const string&) {
+        encontrado = true;
+    });
+    return encontrado;
+}
+bool tiene_ver_despues(const string& usuario) {
+    bool encontrado = false;
+    leerLineasUsuario(usuario, VER_DESPUES_TAG, [&](const string&) {
+        encontrado = true;
+    });
+    return encontrado;
 }
 
 string extraer_genero(const string& linea) {
@@ -276,40 +528,74 @@ string extraer_genero(const string& linea) {
     return "";
 }
 
-void recomendar_por_ultimo_like(
+void recomendar_por_likes(
     SearchEngine& engine,
     const string& usuario
 ) {
+    vector<string> likes;
+    leerLineasUsuario(usuario, LIKE_TAG, [&](const string& linea) {
+        likes.push_back(linea);
+    });
 
-    string ultima = obtener_ultimo_like(usuario);
-
-    if (ultima.empty()) {
-
+    if (likes.empty()) {
         cout << "No hay likes previos.\n";
         return;
     }
 
-    string genero = extraer_genero(ultima);
+    int start = max(0, (int)likes.size() - 5);
+    vector<string> ultimos5(likes.begin() + start, likes.end());
 
-    cout << "\nBasado en tu ultimo like ("
-         << genero
-         << "):\n";
+    unordered_map<string, int> freq;
+    vector<string> generos;
+    for (const string& like : ultimos5) {
+        string g = normalize(extraer_genero(like));
+        if (!g.empty()) {
+            freq[g]++;
+            generos.push_back(g);
+        }
+    }
 
-    vector<int> ids = engine.search(genero);
+    if (freq.empty()) {
+        cout << "No se encontraron generos.\n";
+        return;
+    }
+
+    string generoElegido;
+    int maxFreq = 0;
+    for (const auto& [g, f] : freq) {
+        if (f > maxFreq) {
+            maxFreq = f;
+            generoElegido = g;
+        }
+    }
+
+    Resultados ids;
+    if (maxFreq == 1 && freq.size() >= 2) {
+        generoElegido.clear();
+        for (const string& g : generos) {
+            if (!generoElegido.empty()) generoElegido += " ";
+            generoElegido += g;
+        }
+    }
+
+    ids = engine.searchByField(
+        generoElegido,
+        [](const Movie& m) { return m.normalizedGenre; }
+    );
 
     if (ids.empty()) {
+        ids = engine.search(generoElegido);
+    }
 
+    if (ids.empty()) {
         cout << "No se encontraron recomendaciones.\n";
         return;
     }
 
+    cout << "\nRecomendaciones:\n";
     int limite = min(5, (int)ids.size());
-
     for (int i = 0; i < limite; i++) {
-
-        cout << "- "
-             << engine.getMovie(ids[i]).title
-             << endl;
+        cout << "- " << engine.getMovie(ids[i]).title << endl;
     }
 }
 
@@ -317,27 +603,33 @@ void dar_me_gusta(const string & nombre_usuario, const string& linea) {
     string archivo = nombre_usuario + ".txt";
     ofstream file(archivo, ios::app);
     if (file.is_open()) {
-        file << linea<< endl;
+        file << linea << endl;
         file.close();
         cout << "Pelicula guardada en tus likes.\n";
+
+        // OBSERVER: notificar a todos los suscriptores si fue un like
+        if (linea.find(LIKE_TAG) != string::npos) {
+            // Extraer el genero de la linea "[like] | Genero"
+            size_t pos = linea.find("|");
+            string genero = (pos != string::npos)
+                            ? linea.substr(pos + 2)   // saltar "| "
+                            : "";
+            LikeEventBus::getInstance().notify(nombre_usuario, genero);
+        }
     } else {
         cout << "Error al guardar.\n";
     }
 }
 
-void mostrar_ver_despues(const string& nombre_usuario) {
-    string archivo = nombre_usuario + ".txt";
-    ifstream file(archivo);
-    if (!file.is_open()) {
-        cout << "No se pudo abrir el archivo.\n";
-        return;
-    }
-    string linea;
+void mostrar_ver_despues(const string& nombre_usuario, int m) {
+    stack<string> peliculas_ver_despues;
+    leerLineasUsuario(nombre_usuario, VER_DESPUES_TAG, [&](const string& linea) {
+        peliculas_ver_despues.push(linea);
+    });
     cout << "\n--- PELICULAS PARA VER DESPUES ---\n";
-    while (getline(file, linea)) {
-        if (linea.find("[ver luego]") != string::npos) {
-            cout << linea << endl;
-        }
+    int limite = min(m, (int)peliculas_ver_despues.size());
+    for (int i = 0; i < limite; i++) {
+        cout << peliculas_ver_despues.top() << endl;
+        peliculas_ver_despues.pop();
     }
-    file.close();
 }

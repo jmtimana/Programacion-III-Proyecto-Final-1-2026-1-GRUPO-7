@@ -1,38 +1,93 @@
 #include "../include/SearchEngine.h"
 #include "../include/UserManager.h"
-
+#include "../include/PlanFactory.h"
+#include "../include/PlanSession.h"
+#include "../include/LikeObserver.h"
+#include <functional>
 #include <iostream>
 #include <limits>
-
+#include <future>
 using namespace std;
 
+void comencemos( SearchEngine &engine){
+
+    engine.loadCSV(
+            "../Data/wiki_movie_plots_deduped.csv"
+        );
+}
+
+IPlanFactory* seleccionarPlan() {
+    int op;
+    while (true) {
+        cout << "\n========================================\n";
+        cout << "   STREAMING PLATFORM P3\n";
+        cout << "   Seleccione su plan de suscripcion:\n";
+        cout << "========================================\n";
+        cout << "[1] Plan Individual\n";
+        cout << "    - 1 perfil, hasta 3 likes, sin watchlist\n";
+        cout << "[2] Plan Familiar\n";
+        cout << "    - Hasta 5 perfiles, likes ilimitados, watchlist\n";
+        cout << "========================================\n";
+        cout << "Seleccione: ";
+
+        cin >> op;
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "\nOpcion invalida.\n";
+            continue;
+        }
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+        if (op == 1) return new PlanIndividualFactory();
+        if (op == 2) return new PlanFamiliarFactory();
+        cout << "\nOpcion invalida.\n";
+    }
+}
+
 int main() {
-
+    //carga de archivos asincrona
+    SearchEngine& engine = SearchEngine::getInstance();
     system("chcp 65001");
-
+    future<void> res = async(launch::async,
+        comencemos,
+        std::ref(engine));
     srand(time(NULL));
+    // ── OBSERVER: crear observadores y suscribirlos al bus ──
+    LikeLogger likeLogger;
+    LikeCounter likeCounter;
+    GenreStatsObserver genreStats;
 
-    SearchEngine engine;
+    LikeEventBus::getInstance().subscribe(&likeLogger);
+    LikeEventBus::getInstance().subscribe(&likeCounter);
+    LikeEventBus::getInstance().subscribe(&genreStats);
+    // ── 1. ABSTRACT FACTORY: elegir plan
+    IPlanFactory* factory = seleccionarPlan();
+    PlanSession   planSession(factory);
+
+    // ── 2. MENU DE GESTION DE USUARIOS (antes de cargar BD) ─
+    //    Permite agregar/eliminar perfiles según las reglas del plan.
+    planSession.menuGestionUsuarios();
 
     cout << "====================================\n";
     cout << " Cargando base de datos...\n";
     cout << "====================================\n";
 
-    engine.loadCSV(
-        "../Data/wiki_movie_plots_deduped.csv"
-    );
+    cout << "Cargando datos";
+    cout.flush();
+    res.get();
+    cout << "\rDatos cargados.\n";
+
 
     string usuario_actual;
-
     int opcion;
-
     while (true) {
 
         cout << "\n====================================\n";
         cout << "     STREAMING PLATFORM P3\n";
         cout << "====================================\n";
         cout << "[1] Ingresar usuario\n";
-        cout << "[2] Crear usuario\n";
+        cout << "[2] Gestionar usuario\n";
         cout << "[3] Salir\n";
         cout << "====================================\n";
         cout << "Seleccione: ";
@@ -58,9 +113,11 @@ int main() {
             '\n'
         );
 
-        // INGRESAR USUARIO
-        if (opcion == 1) {
+        enum class MainMenuOp { INGRESAR_USUARIO = 1, GESTIONAR_USUARIO = 2, SALIR = 3 };
+        MainMenuOp opcionMenu = static_cast<MainMenuOp>(opcion);
 
+        if (opcionMenu == MainMenuOp::INGRESAR_USUARIO) {
+            planSession.mostrar_perfiles();
             cout << "\nIngrese usuario: ";
 
             getline(cin, usuario_actual);
@@ -77,46 +134,21 @@ int main() {
                  << usuario_actual
                  << endl;
             cout << "====================================\n";
-
-            mostrar_ver_despues(usuario_actual);
-
-            recomendar_por_ultimo_like(
-                engine,
-                usuario_actual
-            );
-
-            cout << "\n====================================\n";
-            cout << " Puedes buscar:\n";
-            cout << "- titulos\n";
-            cout << "- palabras\n";
-            cout << "- frases\n";
-            cout << "- subcadenas\n";
-            cout << "====================================\n";
-
-            buscarYDarLike(
-                engine,
-                usuario_actual
-            );
-        }
-
-        // CREAR USUARIO
-        else if (opcion == 2) {
-
-            cout << "\nNuevo usuario: ";
-
-            getline(cin, usuario_actual);
-
-            if (existe_usuario(usuario_actual)) {
-
-                cout << "\nEl usuario ya existe.\n";
-
-                continue;
+            if (tiene_likes(usuario_actual)) {
+                recomendar_por_likes(engine, usuario_actual);
+            }
+            else {
+                recomendaciones_nuevo(engine);
             }
 
-            crear_usuario(usuario_actual);
-
-            recomendaciones_nuevo(engine);
-
+            if (tiene_ver_despues(usuario_actual)) {
+                if (factory->nombrePlan()=="Individual") {
+                    mostrar_ver_despues(usuario_actual, 1);
+                }
+                else {
+                    mostrar_ver_despues(usuario_actual, 5);
+                }
+            }
             cout << "\n====================================\n";
             cout << " Puedes buscar:\n";
             cout << "- titulos\n";
@@ -125,16 +157,53 @@ int main() {
             cout << "- subcadenas\n";
             cout << "====================================\n";
 
-            buscarYDarLike(
-                engine,
-                usuario_actual
-            );
+            while (true) {
+
+                cout << "\n====================================\n";
+                cout << "[1] Busqueda general\n";
+                cout << "[2] Busqueda por categoria\n";
+                cout << "[0] Cerrar sesion\n";
+                cout << "====================================\n";
+                cout << "Seleccione: ";
+
+                int modo;
+                cin >> modo;
+
+                if (cin.fail()) {
+                    cin.clear();
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                    cout << "\nOpcion invalida.\n";
+                    continue;
+                }
+
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+                if (modo == 0) break;
+
+                if (modo == 1) {
+                    buscarYDarLike(engine, usuario_actual);
+                    continue;
+                }
+
+                if (modo == 2) {
+                    buscarPorCategoria(engine, usuario_actual);
+                    continue;
+                }
+
+                cout << "\nOpcion invalida.\n";
+            }
         }
 
-        else if (opcion == 3) {
+        else if (opcionMenu == MainMenuOp::GESTIONAR_USUARIO) {
+            planSession.menuGestionUsuarios();
+
+        }
+
+        else if (opcionMenu == MainMenuOp::SALIR) {
+            likeCounter.mostrarResumen();
+            genreStats.mostrarTop(5);
 
             cout << "\nCerrando programa...\n";
-
             break;
         }
 
@@ -143,6 +212,6 @@ int main() {
             cout << "\nOpcion invalida.\n";
         }
     }
-
+    delete factory;
     return 0;
 }
